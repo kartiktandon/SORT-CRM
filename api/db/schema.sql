@@ -1,0 +1,59 @@
+CREATE DATABASE IF NOT EXISTS short_crm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE short_crm;
+
+CREATE TABLE users (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(120) NOT NULL, email VARCHAR(190) NOT NULL UNIQUE,
+  role ENUM('admin','manager','member') NOT NULL DEFAULT 'member',
+  job_title VARCHAR(120), status ENUM('active','away','inactive') DEFAULT 'active',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+CREATE TABLE leads (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(120) NOT NULL, company VARCHAR(160), email VARCHAR(190), phone VARCHAR(40),
+  source VARCHAR(80), status ENUM('New leads','Contacted','Interested','Proposal','Closed','Lost') DEFAULT 'New leads',
+  estimated_value DECIMAL(12,2) DEFAULT 0, notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+CREATE TABLE clients (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(160) NOT NULL, industry VARCHAR(120), email VARCHAR(190), phone VARCHAR(40),
+  type ENUM('Retainer','Project') DEFAULT 'Retainer', status ENUM('Onboarding','Active','Inactive') DEFAULT 'Onboarding',
+  monthly_value DECIMAL(12,2) DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+CREATE TABLE projects (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, client_id BIGINT UNSIGNED NOT NULL,
+  name VARCHAR(180) NOT NULL, description TEXT, status ENUM('Not started','In progress','On hold','Completed') DEFAULT 'Not started',
+  progress TINYINT UNSIGNED DEFAULT 0, start_date DATE, due_date DATE, monthly_value DECIMAL(12,2) DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_projects_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+);
+CREATE TABLE project_members (
+  project_id BIGINT UNSIGNED NOT NULL, user_id BIGINT UNSIGNED NOT NULL,
+  PRIMARY KEY(project_id,user_id),
+  FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
+  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE tasks (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, project_id BIGINT UNSIGNED, assignee_id BIGINT UNSIGNED,
+  title VARCHAR(180) NOT NULL, description TEXT, status ENUM('Not started','Pending','In progress','Completed') DEFAULT 'Not started',
+  priority ENUM('low','medium','high') DEFAULT 'medium', due_date DATE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE SET NULL,
+  FOREIGN KEY(assignee_id) REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE TABLE invoices (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, client_id BIGINT UNSIGNED NOT NULL,
+  invoice_number VARCHAR(40) NOT NULL UNIQUE, amount DECIMAL(12,2) NOT NULL,
+  status ENUM('Draft','Pending','Paid','Overdue') DEFAULT 'Draft', issue_date DATE, due_date DATE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE RESTRICT
+);
+CREATE TABLE agreements (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, client_id BIGINT UNSIGNED NOT NULL,
+  title VARCHAR(180) NOT NULL, type VARCHAR(80), status ENUM('Draft','Sent','Active','Expired') DEFAULT 'Draft',
+  start_date DATE, end_date DATE, document_url VARCHAR(500),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE
+);
