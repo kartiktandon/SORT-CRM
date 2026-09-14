@@ -1,9 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import mysql from 'mysql2/promise';
-import '../src/db.js';
+import { connectionOptions } from '../src/db.js';
 const name=process.env.MYSQL_DATABASE || 'short_crm';
-if(!/^[a-zA-Z0-9_]+$/.test(name))throw Error('MYSQL_DATABASE must contain only letters, digits, or underscores.');
-const connection=await mysql.createConnection({host:process.env.MYSQL_HOST||'127.0.0.1',port:Number(process.env.MYSQL_PORT||3306),user:process.env.MYSQL_USER||'root',password:process.env.MYSQL_PASSWORD||'',connectTimeout:5000});
+if(!/^[a-zA-Z0-9_-]{1,64}$/.test(name))throw Error('MYSQL_DATABASE must contain 1–64 letters, digits, underscores, or hyphens.');
+const connection=await mysql.createConnection({...connectionOptions,database:undefined});
 try {
  await connection.query(`CREATE DATABASE IF NOT EXISTS \`${name}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
  await connection.changeUser({database:name});
