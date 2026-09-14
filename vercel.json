@@ -4,5 +4,11 @@
   "buildCommand": "npm run build:vercel",
   "outputDirectory": "dist/client",
   "installCommand": "npm ci",
-  "cleanUrls": true
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://sort-crm-backend.vercel.app/api/:path*"
+    }
+  ]
 }

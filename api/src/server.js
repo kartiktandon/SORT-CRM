@@ -7,7 +7,7 @@ import { resources, validate } from './resources.js';
 
 const app=express();
 app.disable('x-powered-by');
-const origin=process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
+const origin=(process.env.FRONTEND_ORIGIN || 'http://localhost:3000').replace(/\/+$/, '');
 app.use(cors({origin,credentials:true}));
 app.use(express.json({limit:'1mb'}));
 app.use((req,res,next)=>{
