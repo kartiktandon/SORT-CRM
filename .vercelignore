@@ -1,4 +1,4 @@
-api/
+api/.mysql/
 .env*
 .git/
 node_modules/
