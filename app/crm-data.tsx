@@ -24,6 +24,7 @@ type Context = {
   error: string;
   refresh: () => Promise<void>;
   save: (resource: string, record: Partial<RecordData>) => Promise<RecordData>;
+  remove: (resource: string, id: number) => Promise<void>;
   saveDocument: (key: string, value: unknown) => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -104,6 +105,29 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       setBusy(false);
     }
   };
+  const remove = async (resource: string, id: number) => {
+    setBusy(true);
+    setError('');
+    try {
+      await api(`/${resource}/${id}`, { method: 'DELETE' });
+      setState((previous) => {
+        if (!previous) return previous;
+        const rows = (previous.data[resource] || []) as RecordData[];
+        return {
+          ...previous,
+          data: {
+            ...previous.data,
+            [resource]: rows.filter((row) => row.id !== id),
+          },
+        };
+      });
+    } catch (error) {
+      handleError(error);
+      throw error;
+    } finally {
+      setBusy(false);
+    }
+  };
   const saveDocument = async (key: string, value: unknown) => {
     setBusy(true);
     setError('');
@@ -158,7 +182,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     );
   return (
     <CrmContext.Provider
-      value={{ ...state, busy, error, refresh, save, saveDocument, logout }}
+      value={{ ...state, busy, error, refresh, save, remove, saveDocument, logout }}
     >
       {error && (
         <div

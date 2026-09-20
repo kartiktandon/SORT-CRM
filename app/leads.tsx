@@ -11,6 +11,7 @@ import {
   Crown,
   Download,
   Eye,
+  FileText,
   Globe,
   Camera,
   LayoutGrid,
@@ -23,6 +24,7 @@ import {
   Search,
   SlidersHorizontal,
   Target,
+  Trash2,
   Trophy,
   UserPlus,
   Users,
@@ -137,7 +139,7 @@ function exportLeads(leads: Lead[]) {
 }
 
 export default function LeadsExplorer() {
-  const { user, save, busy } = useCrm();
+  const { user, save, remove, busy } = useCrm();
   const records = useRecords('leads');
   const owners = useRecords('users').map((row) => text(row, 'name'));
   const leads: Lead[] = records.map((row) => ({
@@ -234,6 +236,35 @@ export default function LeadsExplorer() {
         ? selected.filter((value) => value !== id)
         : [...selected, id],
     );
+  const deleteLead = async (lead: Lead) => {
+    if (!lead.id) return;
+    const ok = window.confirm(`Are you sure you want to delete lead "${lead.name}"?`);
+    if (!ok) return;
+    try {
+      await remove('leads', lead.id);
+      setSelected((prev) => prev.filter((id) => id !== lead.id));
+      if (draft?.id === lead.id) setDraft(null);
+      setNotice(`Lead "${lead.name}" has been deleted.`);
+    } catch {
+      setNotice('Failed to delete lead. Please try again.');
+    }
+  };
+  const deleteSelected = async () => {
+    if (!selected.length) return;
+    const ok = window.confirm(
+      `Are you sure you want to delete ${selected.length} selected lead(s)?`,
+    );
+    if (!ok) return;
+    try {
+      for (const id of selected) {
+        await remove('leads', id);
+      }
+      setSelected([]);
+      setNotice(`${selected.length} lead(s) deleted.`);
+    } catch {
+      setNotice('Failed to delete some leads. Please try again.');
+    }
+  };
   const openLead = (lead: Lead, tab = 'Overview') => {
     setDraft({ ...lead });
     setDetailTab(tab);
@@ -271,11 +302,22 @@ export default function LeadsExplorer() {
     ) : (
       <span aria-hidden="true">f</span>
     );
-  const stageBadge = (lead: Lead) => (
-    <span className="lx-stage" style={{ background: stageColors[lead.stage] }}>
-      {lead.stage}
-    </span>
-  );
+  const stageBadge = (lead: Lead) => {
+    const color = stageColors[lead.stage] || '#6366f1';
+    return (
+      <span
+        className="lx-stage"
+        style={{
+          backgroundColor: `${color}18`,
+          color: color,
+          borderColor: `${color}38`,
+        }}
+      >
+        <span className="lx-stage-dot" style={{ backgroundColor: color }} />
+        {lead.stage}
+      </span>
+    );
+  };
   const select = (
     label: string,
     value: string,
@@ -292,6 +334,25 @@ export default function LeadsExplorer() {
     >
       {options.map((option) => (
         <option key={option}>{option}</option>
+      ))}
+    </select>
+  );
+  const formSelect = (
+    label: string,
+    value: string,
+    options: string[],
+    change: (value: string) => void,
+  ) => (
+    <select
+      className="lx-field-select"
+      aria-label={label}
+      value={value}
+      onChange={(e) => change(e.target.value)}
+    >
+      {options.map((option) => (
+        <option key={option} value={option}>
+          {option}
+        </option>
       ))}
     </select>
   );
@@ -674,6 +735,14 @@ export default function LeadsExplorer() {
           >
             Export selected
           </button>
+          <button
+            className="lx-bulk-delete"
+            disabled={busy}
+            onClick={() => void deleteSelected()}
+          >
+            <Trash2 size={12} />
+            Delete selected
+          </button>
           <button onClick={() => setSelected([])}>Clear selection</button>
         </div>
       )}
@@ -707,14 +776,19 @@ export default function LeadsExplorer() {
                         className={`lx-platform platform-${lead.platform.toLowerCase()}`}
                       >
                         {platformMark(lead.platform)}
-                        {lead.platform === 'Instagram'
-                          ? 'IG'
-                          : lead.platform === 'Facebook'
-                            ? 'FB'
-                            : 'WB'}
+                        {lead.platform}
                       </span>
                       {lead.temperature === 'Hot' && (
-                        <span className="lx-hot">Hot</span>
+                        <span className="lx-tag-priority priority-hot">🔥 Hot</span>
+                      )}
+                      {lead.temperature === 'Warm' && (
+                        <span className="lx-tag-priority priority-warm">⚡ Warm</span>
+                      )}
+                      {lead.temperature === 'Cold' && (
+                        <span className="lx-tag-priority priority-cold">❄️ Cold</span>
+                      )}
+                      {lead.followUp === 'Overdue' && (
+                        <span className="lx-tag-overdue">Overdue</span>
                       )}
                     </div>
                   </div>
@@ -725,7 +799,6 @@ export default function LeadsExplorer() {
                       onChange={() => toggleSelected(lead.id)}
                       aria-label={`Select ${lead.name}`}
                     />
-                    {lead.followUp === 'Overdue' && <span>OVERDUE</span>}
                   </div>
                 </header>
                 <div className="lx-contact-info">
@@ -743,15 +816,26 @@ export default function LeadsExplorer() {
                   </span>
                 </div>
                 <div className="lx-attributes">
-                  <span>{lead.budget || 'Budget pending'}</span>
-                  <span>
-                    <Briefcase size={10} />
-                    {lead.service || lead.company}
-                  </span>
-                  <span>
-                    <CalendarClock size={10} />
-                    {lead.timeline || 'Timeline pending'}
-                  </span>
+                  {lead.budget && (
+                    <span className="lx-attr-budget">{lead.budget}</span>
+                  )}
+                  {lead.service ? (
+                    <span>
+                      <Briefcase size={10} />
+                      {lead.service}
+                    </span>
+                  ) : lead.company ? (
+                    <span>
+                      <Briefcase size={10} />
+                      {lead.company}
+                    </span>
+                  ) : null}
+                  {lead.timeline && (
+                    <span>
+                      <CalendarClock size={10} />
+                      {lead.timeline}
+                    </span>
+                  )}
                 </div>
                 <p className="lx-campaign">
                   {lead.company} · {lead.source}
@@ -766,7 +850,13 @@ export default function LeadsExplorer() {
                   </span>
                   {lead.followUp !== 'No follow-up' && (
                     <span
-                      className={lead.followUp === 'Overdue' ? 'overdue' : ''}
+                      className={
+                        lead.followUp === 'Overdue'
+                          ? 'overdue'
+                          : lead.followUp === 'Due Today'
+                            ? 'due-today'
+                            : ''
+                      }
                     >
                       <CalendarClock size={10} />
                       {lead.followUp}
@@ -803,6 +893,17 @@ export default function LeadsExplorer() {
                   <button onClick={() => openLead(lead)}>
                     <Eye size={12} />
                     Details
+                  </button>
+                  <button
+                    className="lx-card-delete"
+                    title={`Delete ${lead.name}`}
+                    aria-label={`Delete ${lead.name}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void deleteLead(lead);
+                    }}
+                  >
+                    <Trash2 size={12} />
                   </button>
                 </div>
               </div>
@@ -894,13 +995,24 @@ export default function LeadsExplorer() {
                   <td>{lead.owner || 'Unassigned'}</td>
                   <td>{lead.followUp}</td>
                   <td>
-                    <button
-                      className="lx-icon-button"
-                      aria-label={`Details for ${lead.name}`}
-                      onClick={() => openLead(lead)}
-                    >
-                      <Eye size={14} />
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <button
+                        className="lx-icon-button"
+                        aria-label={`Details for ${lead.name}`}
+                        title="View Details"
+                        onClick={() => openLead(lead)}
+                      >
+                        <Eye size={14} />
+                      </button>
+                      <button
+                        className="lx-icon-button lx-btn-delete-icon"
+                        aria-label={`Delete ${lead.name}`}
+                        title="Delete Lead"
+                        onClick={() => void deleteLead(lead)}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -944,27 +1056,87 @@ export default function LeadsExplorer() {
         }}
       >
         <DialogContent className="ws-dialog lx-dialog">
-          <DialogTitle>
-            {draft?.id ? draft.name : 'Add Lead Manually'}
-          </DialogTitle>
-          <DialogDescription>
-            {draft?.id
-              ? 'Contact information and lead management.'
-              : 'Add a new opportunity to your lead workspace.'}
-          </DialogDescription>
           {draft && (
             <>
-              <div className="lx-dialog-tabs">
-                {['Overview', 'Contact', 'Notes'].map((tab) => (
-                  <button
-                    key={tab}
-                    className={detailTab === tab ? 'active' : ''}
-                    onClick={() => setDetailTab(tab)}
-                  >
-                    {tab}
-                  </button>
-                ))}
+              <div className="lx-dialog-header">
+                <div
+                  className="lx-dialog-avatar"
+                  style={
+                    draft.stage && stageColors[draft.stage]
+                      ? {
+                          background: `linear-gradient(135deg, ${stageColors[draft.stage]}, #4f46e5)`,
+                        }
+                      : undefined
+                  }
+                >
+                  {draft.name ? draft.name[0]?.toUpperCase() : '+'}
+                </div>
+                <div className="lx-dialog-title-block">
+                  <DialogTitle className="lx-dialog-title">
+                    {draft.id ? draft.name : 'Add Lead Manually'}
+                  </DialogTitle>
+                  <DialogDescription className="lx-dialog-description">
+                    {draft.id ? (
+                      <span className="lx-dialog-meta">
+                        <span
+                          className="lx-badge-stage"
+                          style={{
+                            backgroundColor: `${stageColors[draft.stage]}20`,
+                            color: stageColors[draft.stage],
+                            borderColor: `${stageColors[draft.stage]}40`,
+                          }}
+                        >
+                          {draft.stage}
+                        </span>
+                        <span>·</span>
+                        <span>{draft.platform}</span>
+                        {draft.company && (
+                          <>
+                            <span>·</span>
+                            <span>{draft.company}</span>
+                          </>
+                        )}
+                        {draft.temperature && (
+                          <>
+                            <span>·</span>
+                            <span className="lx-hot">{draft.temperature}</span>
+                          </>
+                        )}
+                      </span>
+                    ) : (
+                      'Add a new opportunity to your lead workspace.'
+                    )}
+                  </DialogDescription>
+                </div>
               </div>
+
+              <div className="lx-dialog-tabs">
+                <button
+                  type="button"
+                  className={detailTab === 'Overview' ? 'active' : ''}
+                  onClick={() => setDetailTab('Overview')}
+                >
+                  <Briefcase size={14} />
+                  Overview
+                </button>
+                <button
+                  type="button"
+                  className={detailTab === 'Contact' ? 'active' : ''}
+                  onClick={() => setDetailTab('Contact')}
+                >
+                  <Phone size={14} />
+                  Contact & Actions
+                </button>
+                <button
+                  type="button"
+                  className={detailTab === 'Notes' ? 'active' : ''}
+                  onClick={() => setDetailTab('Notes')}
+                >
+                  <FileText size={14} />
+                  Notes & Details
+                </button>
+              </div>
+
               <form
                 onSubmit={async (event) => {
                   event.preventDefault();
@@ -984,37 +1156,67 @@ export default function LeadsExplorer() {
               >
                 {detailTab === 'Overview' && (
                   <div className="lx-detail-fields">
-                    {(
-                      [
-                        ['name', 'Full Name'],
-                        ['company', 'Company'],
-                        ['city', 'City'],
-                        ['budget', 'Budget'],
-                        ['service', 'Service'],
-                        ['timeline', 'Timeline'],
-                      ] as const
-                    ).map(([key, label]) => (
-                      <label key={key} htmlFor={`lead-${key}`}>
-                        {label}
-                        <Input
-                          id={`lead-${key}`}
-                          required={key === 'name'}
-                          value={draft[key]}
-                          onChange={(e) =>
-                            setDraft({ ...draft, [key]: e.target.value })
-                          }
-                        />
+                    <div className="lx-field-group">
+                      <label htmlFor="lead-name" className="lx-field-label">
+                        Full Name <span className="lx-req">*</span>
                       </label>
-                    ))}
-                    <div>
-                      <span>Stage</span>
-                      {select('Lead stage', draft.stage, stageNames, (value) =>
+                      <Input
+                        id="lead-name"
+                        className="lx-field-input"
+                        placeholder="e.g. Rahul Sharma"
+                        required
+                        value={draft.name}
+                        onChange={(e) =>
+                          setDraft({ ...draft, name: e.target.value })
+                        }
+                      />
+                    </div>
+
+                    <div className="lx-field-group">
+                      <label htmlFor="lead-company" className="lx-field-label">
+                        Company / Brand
+                      </label>
+                      <Input
+                        id="lead-company"
+                        className="lx-field-input"
+                        placeholder="e.g. Apex Marketing"
+                        value={draft.company}
+                        onChange={(e) =>
+                          setDraft({ ...draft, company: e.target.value })
+                        }
+                      />
+                    </div>
+
+                    <div className="lx-field-group">
+                      <label htmlFor="lead-stage" className="lx-field-label">
+                        Pipeline Stage
+                      </label>
+                      {formSelect('Lead stage', draft.stage, stageNames, (value) =>
                         setDraft({ ...draft, stage: value }),
                       )}
                     </div>
-                    <div>
-                      <span>Platform</span>
-                      {select(
+
+                    <div className="lx-field-group">
+                      <label htmlFor="lead-priority" className="lx-field-label">
+                        Priority / Temperature
+                      </label>
+                      {formSelect(
+                        'Lead temperature',
+                        draft.temperature || 'Normal',
+                        ['Normal', 'Hot', 'Warm', 'Cold'],
+                        (value) =>
+                          setDraft({
+                            ...draft,
+                            temperature: value === 'Normal' ? '' : value,
+                          }),
+                      )}
+                    </div>
+
+                    <div className="lx-field-group">
+                      <label htmlFor="lead-platform" className="lx-field-label">
+                        Lead Source Platform
+                      </label>
+                      {formSelect(
                         'Lead platform',
                         draft.platform,
                         platforms,
@@ -1026,9 +1228,12 @@ export default function LeadsExplorer() {
                           }),
                       )}
                     </div>
-                    <div>
-                      <span>Owner</span>
-                      {select(
+
+                    <div className="lx-field-group">
+                      <label htmlFor="lead-owner" className="lx-field-label">
+                        Assigned Owner
+                      </label>
+                      {formSelect(
                         'Lead owner',
                         draft.owner || 'Unassigned',
                         [
@@ -1049,9 +1254,72 @@ export default function LeadsExplorer() {
                           }),
                       )}
                     </div>
-                    <div>
-                      <span>Follow-up</span>
-                      {select(
+
+                    <div className="lx-field-group">
+                      <label htmlFor="lead-budget" className="lx-field-label">
+                        Estimated Budget
+                      </label>
+                      <Input
+                        id="lead-budget"
+                        className="lx-field-input"
+                        placeholder="e.g. ₹50,000 / month"
+                        value={draft.budget}
+                        onChange={(e) =>
+                          setDraft({ ...draft, budget: e.target.value })
+                        }
+                      />
+                    </div>
+
+                    <div className="lx-field-group">
+                      <label htmlFor="lead-service" className="lx-field-label">
+                        Interested Service
+                      </label>
+                      <Input
+                        id="lead-service"
+                        className="lx-field-input"
+                        placeholder="e.g. SEO & Meta Ads"
+                        value={draft.service}
+                        onChange={(e) =>
+                          setDraft({ ...draft, service: e.target.value })
+                        }
+                      />
+                    </div>
+
+                    <div className="lx-field-group">
+                      <label htmlFor="lead-city" className="lx-field-label">
+                        City / Location
+                      </label>
+                      <Input
+                        id="lead-city"
+                        className="lx-field-input"
+                        placeholder="e.g. Mumbai, Maharashtra"
+                        value={draft.city}
+                        onChange={(e) =>
+                          setDraft({ ...draft, city: e.target.value })
+                        }
+                      />
+                    </div>
+
+                    <div className="lx-field-group">
+                      <label htmlFor="lead-timeline" className="lx-field-label">
+                        Project Timeline
+                      </label>
+                      <Input
+                        id="lead-timeline"
+                        className="lx-field-input"
+                        placeholder="e.g. Immediate, 1-2 Months"
+                        value={draft.timeline}
+                        onChange={(e) =>
+                          setDraft({ ...draft, timeline: e.target.value })
+                        }
+                      />
+                    </div>
+
+                    <div className="lx-field-group" style={{ gridColumn: 'span 2' }}>
+                      <label htmlFor="lead-followup" className="lx-field-label">
+                        Follow-up Schedule
+                      </label>
+                      {formSelect(
                         'Lead follow-up',
                         draft.followUp,
                         [
@@ -1065,68 +1333,167 @@ export default function LeadsExplorer() {
                     </div>
                   </div>
                 )}
+
                 {detailTab === 'Contact' && (
-                  <>
-                    <p>Add a contact number to enable Call and WhatsApp.</p>
-                    <label htmlFor="lead-phone">
-                      Phone
-                      <Input
-                        id="lead-phone"
-                        type="tel"
-                        value={draft.phone}
-                        onChange={(e) =>
-                          setDraft({ ...draft, phone: e.target.value })
-                        }
-                      />
-                    </label>
-                    <label htmlFor="lead-email">
-                      Email
-                      <Input
-                        id="lead-email"
-                        type="email"
-                        value={draft.email}
-                        onChange={(e) =>
-                          setDraft({ ...draft, email: e.target.value })
-                        }
-                      />
-                    </label>
-                  </>
+                  <div className="lx-contact-tab-content">
+                    {draft.phone && (
+                      <div className="lx-contact-actions-box">
+                        <a
+                          className="lx-contact-card-btn call"
+                          href={`tel:${draft.phone.replace(/[^+\d]/g, '')}`}
+                        >
+                          <Phone size={16} />
+                          Call Now
+                        </a>
+                        <a
+                          className="lx-contact-card-btn wa"
+                          href={`https://wa.me/${draft.phone.replace(/\D/g, '')}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <MessageSquare size={16} />
+                          WhatsApp
+                        </a>
+                        {draft.email ? (
+                          <a
+                            className="lx-contact-card-btn mail"
+                            href={`mailto:${draft.email}`}
+                          >
+                            <Mail size={16} />
+                            Send Email
+                          </a>
+                        ) : (
+                          <div
+                            className="lx-contact-card-btn"
+                            style={{ opacity: 0.5, cursor: 'not-allowed' }}
+                          >
+                            <Mail size={16} />
+                            No Email
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="lx-detail-fields">
+                      <div className="lx-field-group" style={{ gridColumn: 'span 2' }}>
+                        <label htmlFor="lead-phone" className="lx-field-label">
+                          Phone Number
+                        </label>
+                        <Input
+                          id="lead-phone"
+                          className="lx-field-input"
+                          type="tel"
+                          placeholder="+91 98765 43210"
+                          value={draft.phone}
+                          onChange={(e) =>
+                            setDraft({ ...draft, phone: e.target.value })
+                          }
+                        />
+                      </div>
+
+                      <div className="lx-field-group" style={{ gridColumn: 'span 2' }}>
+                        <label htmlFor="lead-email" className="lx-field-label">
+                          Email Address
+                        </label>
+                        <Input
+                          id="lead-email"
+                          className="lx-field-input"
+                          type="email"
+                          placeholder="client@example.com"
+                          value={draft.email}
+                          onChange={(e) =>
+                            setDraft({ ...draft, email: e.target.value })
+                          }
+                        />
+                      </div>
+
+                      <div className="lx-field-group" style={{ gridColumn: 'span 2' }}>
+                        <label htmlFor="lead-city-contact" className="lx-field-label">
+                          City / Region
+                        </label>
+                        <Input
+                          id="lead-city-contact"
+                          className="lx-field-input"
+                          placeholder="City, State"
+                          value={draft.city}
+                          onChange={(e) =>
+                            setDraft({ ...draft, city: e.target.value })
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
                 )}
+
                 {detailTab === 'Notes' && (
-                  <label htmlFor="lead-notes">
-                    Notes
+                  <div className="lx-field-group">
+                    <label htmlFor="lead-notes" className="lx-field-label">
+                      Activity Notes & Conversation Logs
+                    </label>
                     <textarea
                       id="lead-notes"
-                      rows={5}
+                      className="lx-notes-textarea"
+                      placeholder="Add requirements, meeting minutes, client feedback, or proposal discussions here..."
+                      rows={6}
                       value={draft.notes}
                       onChange={(e) =>
                         setDraft({ ...draft, notes: e.target.value })
                       }
                     />
-                  </label>
+                    <small style={{ color: '#94a3b8', fontSize: '10px', marginTop: '4px' }}>
+                      Notes are saved automatically when updating the lead.
+                    </small>
+                  </div>
                 )}
-                <div className="ws-actions">
-                  <Button
-                    type="button"
-                    className="ws-button ws-secondary"
-                    onClick={() => setDraft(null)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="ws-button"
-                    disabled={busy || !draft.name.trim()}
-                  >
+
+                <div
+                  className="ws-actions"
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    width: '100%',
+                    marginTop: '20px',
+                    paddingTop: '16px',
+                    borderTop: '1px solid #f1f5f9',
+                  }}
+                >
+                  <div>
                     {draft.id ? (
-                      'Update Lead'
-                    ) : (
-                      <>
-                        <Plus size={14} />
-                        Add Lead
-                      </>
-                    )}
-                  </Button>
+                      <Button
+                        type="button"
+                        className="ws-button lx-btn-danger"
+                        disabled={busy}
+                        onClick={() => void deleteLead(draft)}
+                      >
+                        <Trash2 size={13} />
+                        Delete Lead
+                      </Button>
+                    ) : null}
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <Button
+                      type="button"
+                      className="ws-button ws-secondary"
+                      onClick={() => setDraft(null)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="ws-button"
+                      disabled={busy || !draft.name.trim()}
+                    >
+                      {draft.id ? (
+                        'Save Changes'
+                      ) : (
+                        <>
+                          <Plus size={14} />
+                          Add Lead
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </form>
             </>

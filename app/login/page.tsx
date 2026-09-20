@@ -47,12 +47,12 @@ export default function LoginPage() {
       className={`login-page lamp-login ${lampOn ? 'lamp-is-on' : 'lamp-is-off'}`}
     >
       <header className="login-header">
-        <Link className="login-brand" href="/" aria-label="SORTCRM home">
+        <Link className="login-brand" href="/" aria-label="NOVERA CRM home">
           <span>
             <Sparkles size={20} />
           </span>
           <div>
-            SORTCRM<small>A little order. A lot of possibility.</small>
+            NOVERA CRM<small>A little order. A lot of possibility.</small>
           </div>
         </Link>
         <Link href="/" className="login-preview-link">
@@ -251,7 +251,7 @@ export default function LoginPage() {
         </div>
       </section>
       <footer className="login-footer">
-        <span>© {new Date().getFullYear()} SORTCRM</span>
+        <span>© {new Date().getFullYear()} NOVERA CRM</span>
         <span>
           Made for teams with big plans
           <span className="login-footer-star">✦</span>

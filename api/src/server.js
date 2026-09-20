@@ -16,8 +16,30 @@ app.use((req,res,next)=>{
   next();
 });
 const asyncRoute=fn=>(req,res,next)=>Promise.resolve(fn(req,res,next)).catch(next);
-const cookieOptions={httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',path:'/',maxAge:8*60*60*1000};
-app.get('/api/health',asyncRoute(async(_req,res)=>{await db.query('SELECT 1');res.json({ok:true,database:'connected'});}));
+const initExpensesTable = async () => {
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS expenses (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(180) NOT NULL,
+        category VARCHAR(80) DEFAULT 'Other',
+        amount DECIMAL(12,2) NOT NULL,
+        date DATE,
+        payment_method VARCHAR(80),
+        status ENUM('Pending','Approved','Paid','Rejected') DEFAULT 'Paid',
+        vendor VARCHAR(160),
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+  } catch (err) {
+    console.warn('Expenses table initialization note:', err.message);
+  }
+};
+initExpensesTable();
+
+app.get('/api/health',asyncRoute(async(_req,res)=>{await db.query('SELECT 1');await initExpensesTable();res.json({ok:true,database:'connected'});}));
 const attempts=new Map();
 setInterval(()=>{for(const [key,value] of attempts)if(value.until<Date.now())attempts.delete(key);},60000).unref();
 const dummyHash=await hashPassword(randomBytes(24).toString('hex'));
@@ -69,7 +91,7 @@ app.put('/api/documents/:key',asyncRoute(async(req,res)=>{
 for(const resource of Object.keys(resources)) {
   app.get(`/api/${resource}`,asyncRoute(async(req,res)=>{
     const term=String(req.query.q||'').slice(0,190);
-    const column=resource==='tasks'?'title':resource==='invoices'?'invoice_number':resource==='agreements'?'title':resource==='reports'?'weekly_reports':'name';
+    const column=resource==='tasks'||resource==='expenses'?'title':resource==='invoices'?'invoice_number':resource==='agreements'?'title':resource==='reports'?'weekly_reports':'name';
     const [rows]=await db.execute(`SELECT ${resource==='users'?publicUsers:'*'} FROM \`${resource}\` WHERE \`${column}\` LIKE ? ORDER BY id DESC LIMIT 5000`,[`%${term}%`]);res.json({data:rows});
   }));
   app.post(`/api/${resource}`,asyncRoute(async(req,res)=>{
@@ -87,7 +109,7 @@ for(const resource of Object.keys(resources)) {
     const [rows]=await db.execute(`SELECT ${resource==='users'?publicUsers:'*'} FROM \`${resource}\` WHERE id=?`,[req.params.id]);res.json({data:rows[0]});
   }));
   app.delete(`/api/${resource}/:id`,asyncRoute(async(req,res)=>{
-    if(req.user.role!=='admin')return res.status(403).json({error:'Administrator access required.'});
+    if(resource!=='leads'&&resource!=='expenses'&&req.user.role!=='admin')return res.status(403).json({error:'Administrator access required.'});
     if(!/^[1-9]\d*$/.test(req.params.id))return res.status(400).json({error:'Invalid record ID.'});
     if(resource==='users'&&Number(req.params.id)===req.user.id)return res.status(400).json({error:'You cannot delete your own account.'});
     const [result]=await db.execute(`DELETE FROM \`${resource}\` WHERE id=?`,[req.params.id]);if(!result.affectedRows)return res.status(404).json({error:'Record not found.'});res.sendStatus(204);

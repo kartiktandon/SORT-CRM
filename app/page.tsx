@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   Menu,
   MoreHorizontal,
+  Receipt,
   Sparkles,
   Target,
   Users,
@@ -38,6 +39,7 @@ const navigation = [
     label: 'Business',
     items: [
       ['Finance', CircleDollarSign],
+      ['Expenses', Receipt],
       ['Agreements', FileText],
       ['Team', Users],
       ['Reports', BarChart3],
@@ -69,7 +71,7 @@ function Workspace() {
             <Sparkles size={19} />
           </span>
           <span className="brand-copy">
-            <strong>SORTCRM</strong>
+            <strong>NOVERA CRM</strong>
             <small>Growth workspace</small>
           </span>
         </div>

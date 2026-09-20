@@ -1,4 +1,4 @@
-# Short CRM
+# Novera CRM
 
 Responsive agency CRM with a React frontend, Node.js/Express API, authenticated sessions, and MySQL storage.
 

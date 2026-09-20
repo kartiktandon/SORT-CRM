@@ -7,14 +7,24 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  DollarSign,
   Download,
+  FileCheck2,
   LayoutGrid,
   List,
   Plus,
+  Printer,
+  Receipt,
+  RotateCcw,
   Search,
+  Sparkles,
+  TrendingDown,
+  TrendingUp,
+  Wallet,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -95,11 +105,11 @@ function Tabs({
   );
 }
 function Badge({ value }: { value: string }) {
-  const tone = /Active|Paid|Submitted|On Track|Completed|Won|Closed/.test(value)
+  const tone = /Active|Paid|Submitted|On Track|Completed|Won|Closed|Approved|Profitable/.test(value)
     ? 'green'
     : /Pending|Onboarding|Attention|Warm/.test(value)
       ? 'amber'
-      : /Overdue|Delayed|Not Started|Hot|Lost/.test(value)
+      : /Overdue|Delayed|Not Started|Hot|Lost|Rejected|Deficit/.test(value)
         ? 'red'
         : 'blue';
   return <span className={`ws-badge ${tone}`}>{value}</span>;
@@ -415,6 +425,35 @@ const definitions: Record<
       field('submitted_at', 'Submitted At', { kind: 'date' }),
     ],
   },
+  expenses: {
+    title: 'Company Expenses',
+    singular: 'Expense',
+    fields: [
+      field('title', 'Expense / Item Name', { required: true }),
+      field('category', 'Category', {
+        options: [
+          'Software & Tools',
+          'Salaries & Contractors',
+          'Marketing & Ads',
+          'Office & Rent',
+          'Travel & Entertainment',
+          'Utilities',
+          'Legal & Professional',
+          'Hardware & Equipment',
+          'Other',
+        ],
+        required: true,
+      }),
+      field('amount', 'Amount', { kind: 'number', required: true }),
+      field('date', 'Date', { kind: 'date', required: true }),
+      field('payment_method', 'Payment Method', {
+        options: ['Credit Card', 'Bank Transfer', 'UPI', 'Cash', 'Other'],
+      }),
+      statusField(['Pending', 'Approved', 'Paid', 'Rejected']),
+      field('vendor', 'Vendor / Payee'),
+      field('notes', 'Notes', { kind: 'textarea' }),
+    ],
+  },
 };
 
 function RecordEditor({
@@ -678,7 +717,8 @@ export default function WorkspaceContent({
       {active === 'Leads' && <LeadsExplorer />}
       {active === 'Clients' && <ClientsView />}
       {active === 'Projects' && <ProjectsView />}
-      {active === 'Finance' && <FinanceView />}
+      {active === 'Finance' && <FinanceView initialTab="Overview" />}
+      {active === 'Expenses' && <FinanceView initialTab="Expenses" />}
       {active === 'Agreements' && <AgreementsView />}
       {active === 'Team' && <TeamView />}
       {active === 'Reports' && <ResourceView resource="reports" />}
@@ -697,6 +737,7 @@ function Dashboard({ navigate }: { navigate: (value: string) => void }) {
     projects = useRecords('projects'),
     users = useRecords('users'),
     invoices = useRecords('invoices'),
+    expenses = useRecords('expenses'),
     tasks = useRecords('tasks');
   const now = new Date();
   const monthKey = now.toISOString().slice(0, 7);
@@ -712,11 +753,21 @@ function Dashboard({ navigate }: { navigate: (value: string) => void }) {
     ],
     ['Team Members', users.length],
     [
-      'Paid Invoices This Month',
+      'Paid Invoices (Mo.)',
       money(
         total(
           paid.filter((row) =>
             String(row.issue_date || '').startsWith(monthKey),
+          ),
+        ),
+      ),
+    ],
+    [
+      'Company Expenses (Mo.)',
+      money(
+        total(
+          expenses.filter((row) =>
+            String(row.date || '').startsWith(monthKey),
           ),
         ),
       ),
@@ -730,6 +781,9 @@ function Dashboard({ navigate }: { navigate: (value: string) => void }) {
       month: date.toLocaleDateString('en', { month: 'short', year: '2-digit' }),
       amount: total(
         paid.filter((row) => String(row.issue_date || '').startsWith(key)),
+      ),
+      expenses: total(
+        expenses.filter((row) => String(row.date || '').startsWith(key)),
       ),
     };
   });
@@ -754,7 +808,7 @@ function Dashboard({ navigate }: { navigate: (value: string) => void }) {
           <p>Here’s what’s happening in your workspace.</p>
         </div>
       </section>
-      <div className="ws-stats five">
+      <div className="ws-stats">
         {stats.map(([label, value]) => (
           <article key={label}>
             <span>{label}</span>
@@ -765,10 +819,13 @@ function Dashboard({ navigate }: { navigate: (value: string) => void }) {
         ))}
       </div>
       <div className="ws-dashboard-grid">
-        <Panel title="Paid Invoices by Issue Month">
+        <Panel title="Revenue vs Expenses (Last 6 Months)">
           <ChartContainer
             className="ws-revenue-chart"
-            config={{ amount: { label: 'Amount (INR)', color: '#5841ed' } }}
+            config={{
+              amount: { label: 'Collected Revenue', color: '#4f46e5' },
+              expenses: { label: 'Company Spending', color: '#f43f5e' },
+            }}
           >
             <AreaChart data={revenue}>
               <CartesianGrid vertical={false} />
@@ -777,8 +834,16 @@ function Dashboard({ navigate }: { navigate: (value: string) => void }) {
               <ChartTooltip content={<ChartTooltipContent />} />
               <Area
                 dataKey="amount"
-                stroke="#5841ed"
-                fill="#e6e0ff"
+                stroke="#4f46e5"
+                fill="#e0e7ff"
+                fillOpacity={0.6}
+                isAnimationActive={false}
+              />
+              <Area
+                dataKey="expenses"
+                stroke="#f43f5e"
+                fill="#ffe4e6"
+                fillOpacity={0.6}
                 isAnimationActive={false}
               />
             </AreaChart>
@@ -950,26 +1015,88 @@ function ProjectDetail({ id, onBack }: { id: number; onBack: () => void }) {
     </>
   );
 }
-function FinanceView() {
+function FinanceView({ initialTab = 'Overview' }: { initialTab?: string }) {
   const invoices = useRecords('invoices');
-  const [tab, setTab] = useState('Overview');
+  const expenses = useRecords('expenses');
+  const [tab, setTab] = useState(initialTab);
   const [month, setMonth] = useState('All months');
+  const [categoryFilter, setCategoryFilter] = useState('All');
+
   const months = Array.from(
-    new Set(
-      invoices
-        .map((row) => String(row.issue_date || '').slice(0, 7))
-        .filter(Boolean),
-    ),
+    new Set([
+      ...invoices.map((row) => String(row.issue_date || '').slice(0, 7)),
+      ...expenses.map((row) => String(row.date || '').slice(0, 7)),
+    ].filter(Boolean)),
   )
     .sort()
     .reverse();
-  const rows = invoices.filter(
+
+  const invoiceRows = invoices.filter(
     (row) =>
       month === 'All months' || String(row.issue_date || '').startsWith(month),
   );
+  const allExpenseRowsForMonth = expenses.filter(
+    (row) =>
+      month === 'All months' || String(row.date || '').startsWith(month),
+  );
+  const expenseRows = allExpenseRowsForMonth.filter(
+    (row) => categoryFilter === 'All' || row.category === categoryFilter,
+  );
+
+  const totalInvoiced = invoiceRows.reduce(
+    (sum, row) => sum + Number(row.amount || 0),
+    0,
+  );
+  const totalCollected = invoiceRows
+    .filter((row) => row.status === 'Paid')
+    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  const pendingInvoiced = invoiceRows
+    .filter((row) => row.status === 'Pending' || row.status === 'Draft')
+    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
+
+  const totalExpenses = allExpenseRowsForMonth.reduce(
+    (sum, row) => sum + Number(row.amount || 0),
+    0,
+  );
+  const paidExpenses = allExpenseRowsForMonth
+    .filter((row) => row.status === 'Paid' || !row.status)
+    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  const pendingExpenses = allExpenseRowsForMonth
+    .filter((row) => row.status === 'Pending' || row.status === 'Approved')
+    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
+
+  const netOperatingProfit = totalCollected - totalExpenses;
+  const marginPct =
+    totalCollected > 0
+      ? ((netOperatingProfit / totalCollected) * 100).toFixed(1)
+      : '0';
+
+  const categoryTotals: Record<string, number> = {};
+  for (const exp of allExpenseRowsForMonth) {
+    const cat = String(exp.category || 'Other');
+    categoryTotals[cat] = (categoryTotals[cat] || 0) + Number(exp.amount || 0);
+  }
+  const sortedCategories = Object.entries(categoryTotals).sort(
+    (a, b) => b[1] - a[1],
+  );
+  const topCategory = sortedCategories[0];
+
+  const categories = [
+    'All',
+    'Software & Tools',
+    'Salaries & Contractors',
+    'Marketing & Ads',
+    'Office & Rent',
+    'Travel & Entertainment',
+    'Utilities',
+    'Legal & Professional',
+    'Hardware & Equipment',
+    'Other',
+  ];
+
   return (
     <>
-      <Heading title="Finance Center">
+      <Heading title="Finance & Spending Center">
         <Select
           label="Finance month"
           value={month}
@@ -982,32 +1109,213 @@ function FinanceView() {
           'Overview',
           'Invoices',
           'Payments',
-          'Agreements',
           'Expenses',
           'Profit & Loss',
+          'Agreements',
         ]}
         active={tab}
         onChange={setTab}
       />
+
       {tab === 'Overview' && (
-        <div className="ws-stats">
-          {['Total Invoiced', 'Paid', 'Pending', 'Overdue'].map((status) => (
-            <article key={status}>
-              <span>{status}</span>
-              <strong>
-                {money(
-                  rows
-                    .filter(
-                      (row) =>
-                        status === 'Total Invoiced' || row.status === status,
-                    )
-                    .reduce((sum, row) => sum + Number(row.amount), 0),
-                )}
+        <>
+          <div className="ws-stats">
+            <article>
+              <span>Total Invoiced</span>
+              <strong>{money(totalInvoiced)}</strong>
+            </article>
+            <article>
+              <span>Collected Revenue</span>
+              <strong className="text-emerald-600">{money(totalCollected)}</strong>
+            </article>
+            <article>
+              <span>Company Spending</span>
+              <strong className="text-rose-600">{money(totalExpenses)}</strong>
+            </article>
+            <article>
+              <span>Net Operating Profit</span>
+              <strong
+                className={
+                  netOperatingProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                }
+              >
+                {money(netOperatingProfit)}
               </strong>
             </article>
-          ))}
+            <article>
+              <span>Net Margin</span>
+              <strong>{marginPct}%</strong>
+            </article>
+          </div>
+
+          <div className="ws-finance-grid">
+            <Panel title="Financial Performance Summary">
+              <div className="ws-fin-summary-card">
+                <div className="ws-fin-metric-row">
+                  <div className="ws-fin-metric-label">
+                    <span className="ws-fin-dot green" />
+                    <span>Collected Revenue</span>
+                  </div>
+                  <strong className="text-emerald-600">{money(totalCollected)}</strong>
+                </div>
+                <div className="ws-fin-metric-row">
+                  <div className="ws-fin-metric-label">
+                    <span className="ws-fin-dot red" />
+                    <span>Company Spending</span>
+                  </div>
+                  <strong className="text-rose-600">{money(totalExpenses)}</strong>
+                </div>
+                <div className="ws-fin-metric-row">
+                  <div className="ws-fin-metric-label">
+                    <span className="ws-fin-dot amber" />
+                    <span>Pending Receivables</span>
+                  </div>
+                  <strong>{money(pendingInvoiced)}</strong>
+                </div>
+                <div className="ws-fin-metric-row border-t pt-3 mt-2">
+                  <div className="ws-fin-metric-label">
+                    <strong>Net Profit (Collected - Expenses)</strong>
+                  </div>
+                  <strong
+                    className={
+                      netOperatingProfit >= 0
+                        ? 'text-emerald-600 text-base'
+                        : 'text-rose-600 text-base'
+                    }
+                  >
+                    {money(netOperatingProfit)}
+                  </strong>
+                </div>
+                {totalCollected > 0 && (
+                  <div className="ws-fin-progress-wrap mt-4">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
+                      <span>Expense Ratio ({totalExpenses > 0 ? ((totalExpenses / totalCollected) * 100).toFixed(0) : 0}%)</span>
+                      <span>Profit Retention ({marginPct}%)</span>
+                    </div>
+                    <div className="ws-fin-split-bar">
+                      <div
+                        className="ws-fin-split-expense"
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            totalCollected > 0
+                              ? (totalExpenses / totalCollected) * 100
+                              : 0,
+                          )}%`,
+                        }}
+                      />
+                      <div
+                        className="ws-fin-split-profit"
+                        style={{
+                          width: `${Math.max(
+                            0,
+                            totalCollected > 0
+                              ? (netOperatingProfit / totalCollected) * 100
+                              : 0,
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Panel>
+
+            <Panel title="Top Spending Categories">
+              {sortedCategories.length === 0 ? (
+                <p className="ws-empty">No expenses logged for this period.</p>
+              ) : (
+                <div className="ws-categories-breakdown">
+                  {sortedCategories.slice(0, 5).map(([cat, amt]) => {
+                    const pct =
+                      totalExpenses > 0
+                        ? ((amt / totalExpenses) * 100).toFixed(0)
+                        : '0';
+                    return (
+                      <div key={cat} className="ws-cat-row">
+                        <div className="ws-cat-info">
+                          <span className="ws-cat-name">{cat}</span>
+                          <span className="ws-cat-amt">
+                            {money(amt)} ({pct}%)
+                          </span>
+                        </div>
+                        <div className="ws-cat-bar-bg">
+                          <div
+                            className="ws-cat-bar-fill"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="mt-3 text-right">
+                    <button
+                      type="button"
+                      className="ws-link text-xs"
+                      onClick={() => setTab('Expenses')}
+                    >
+                      View All Expenses &rarr;
+                    </button>
+                  </div>
+                </div>
+              )}
+            </Panel>
+          </div>
+        </>
+      )}
+
+      {tab === 'Expenses' && (
+        <div className="ws-expenses-section">
+          <div className="ws-stats">
+            <article>
+              <span>Total Spending</span>
+              <strong className="text-rose-600">{money(totalExpenses)}</strong>
+            </article>
+            <article>
+              <span>Paid Out</span>
+              <strong>{money(paidExpenses)}</strong>
+            </article>
+            <article>
+              <span>Pending / Due</span>
+              <strong className="text-amber-600">{money(pendingExpenses)}</strong>
+            </article>
+            <article>
+              <span>Top Spending Category</span>
+              <strong>
+                {topCategory
+                  ? `${topCategory[0]} (${money(topCategory[1])})`
+                  : '—'}
+              </strong>
+            </article>
+          </div>
+
+          <div className="ws-expense-category-pills">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                className={`ws-cat-pill ${categoryFilter === cat ? 'active' : ''}`}
+                onClick={() => setCategoryFilter(cat)}
+              >
+                {cat}
+                {cat !== 'All' && categoryTotals[cat]
+                  ? ` · ${money(categoryTotals[cat])}`
+                  : ''}
+              </button>
+            ))}
+          </div>
+
+          <ResourceView
+            resource="expenses"
+            filter={(row) =>
+              (month === 'All months' ||
+                String(row.date || '').startsWith(month)) &&
+              (categoryFilter === 'All' || row.category === categoryFilter)
+            }
+          />
         </div>
       )}
+
       {(tab === 'Invoices' || tab === 'Payments') && (
         <ResourceView
           resource="invoices"
@@ -1018,13 +1326,92 @@ function FinanceView() {
           }
         />
       )}
-      {tab === 'Agreements' && <ResourceView resource="agreements" />}
-      {(tab === 'Expenses' || tab === 'Profit & Loss') && (
-        <p className="ws-empty">
-          Expense tracking is not connected yet. No expense or profit figures
-          are available.
-        </p>
+
+      {tab === 'Profit & Loss' && (
+        <div className="ws-pnl-section">
+          <div className="ws-stats">
+            <article>
+              <span>Collected Revenue</span>
+              <strong className="text-emerald-600">{money(totalCollected)}</strong>
+            </article>
+            <article>
+              <span>Total Company Expenses</span>
+              <strong className="text-rose-600">{money(totalExpenses)}</strong>
+            </article>
+            <article>
+              <span>Net Operating Profit</span>
+              <strong
+                className={
+                  netOperatingProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                }
+              >
+                {money(netOperatingProfit)}
+              </strong>
+            </article>
+            <article>
+              <span>Profit Margin</span>
+              <strong>{marginPct}%</strong>
+            </article>
+          </div>
+
+          <Panel title="Monthly Profit & Loss Statement">
+            {months.length === 0 ? (
+              <p className="ws-empty">No financial records available yet.</p>
+            ) : (
+              <DataTable
+                columns={[
+                  'Month',
+                  'Invoiced',
+                  'Collected Revenue',
+                  'Company Expenses',
+                  'Net Profit',
+                  'Status',
+                ]}
+                rows={months.map((m) => {
+                  const mInvoices = invoices.filter((r) =>
+                    String(r.issue_date || '').startsWith(m),
+                  );
+                  const mExpenses = expenses.filter((r) =>
+                    String(r.date || '').startsWith(m),
+                  );
+                  const mBilled = mInvoices.reduce(
+                    (s, r) => s + Number(r.amount || 0),
+                    0,
+                  );
+                  const mPaid = mInvoices
+                    .filter((r) => r.status === 'Paid')
+                    .reduce((s, r) => s + Number(r.amount || 0), 0);
+                  const mSpent = mExpenses.reduce(
+                    (s, r) => s + Number(r.amount || 0),
+                    0,
+                  );
+                  const mProfit = mPaid - mSpent;
+                  return [
+                    m,
+                    money(mBilled),
+                    money(mPaid),
+                    money(mSpent),
+                    <strong
+                      key={m}
+                      className={
+                        mProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                      }
+                    >
+                      {money(mProfit)}
+                    </strong>,
+                    <Badge
+                      key={`b-${m}`}
+                      value={mProfit >= 0 ? 'Profitable' : 'Deficit'}
+                    />,
+                  ];
+                })}
+              />
+            )}
+          </Panel>
+        </div>
       )}
+
+      {tab === 'Agreements' && <ResourceView resource="agreements" />}
     </>
   );
 }
@@ -1041,66 +1428,196 @@ function AgreementsView() {
     </>
   );
 }
+export const NOVERA_BOILERPLATE: Record<string, string> = {
+  quotationNo: 'QT-2026-101',
+  date: '18 Sept 2026',
+  clientName: 'ZaapMed',
+  projectName: 'Pharmacy Order Processing & Fulfilment System',
+  agencyName: 'NOVERA LABS',
+  deliverablesSummary: 'Customer Web App · Admin Dashboard · Chemist Portal',
+  scope1Title: '1. Customer Web Application',
+  scope1Items:
+    '• Secure WhatsApp-linked order entry/session\n• Medicine search, exact product selection and cart\n• 50 GB MySql database free & Website hosting\n• Indicative order summary and order submission',
+  scope2Title: '2. Admin Dashboard',
+  scope2Items:
+    '• Order/customer management and unique Order ID\n• Chemist allocation and response comparison\n• Multi-chemist item allocation and finalisation\n• Final summary, customer confirmation/rejection and status management',
+  scope3Title: '3. Chemist Portal',
+  scope3Items:
+    '• View allocated orders/items\n• Verify availability, quantity, current MRP, discount and remarks\n• Prescription verification where required\n• Re-verification and packing-status updates',
+  scope4Title: '4. Medicine Data & Pricing',
+  scope4Items:
+    '• Import and integrate client-supplied medicine master Excel data\n• Product ID-based medicine identification and search\n• Configured serviceability, discount, handling and distance-charge rules\n• Final pricing based on verified chemist information',
+  scope5Title: '5. Notifications, Security & Audit',
+  scope5Items:
+    '• WhatsApp notifications and secure action links\n• Role-based access for Customer, Admin and Chemist\n• Relevant order/status audit information\n• AI-assisted WhatsApp architecture for approved information lookup/actions, where applicable',
+  exclusions:
+    '• Rider Portal and rider-side delivery/GPS operations\n• WhatsApp, AI, Maps/location, payment/UPI, hosting, SMS/email and other third-party usage charges\n• Independent medical validation, correction or enrichment of client-supplied medicine data\n• New features or integrations outside the agreed scope',
+  totalProjectValue: '₹2,00,000',
+  paymentTerms:
+    '40% Advance: ₹80,000 | 30% Milestone: ₹60,000 | 30% Final: ₹60,000',
+  keyTerms:
+    '• TAT of 20 working days starts after advance payment and receipt of required data, credentials, approvals and third-party access.\n• Client is responsible for the accuracy, legality and completeness of supplied medicine/product information.\n• Material changes or additions to scope will be estimated and quoted separately.',
+  footerText:
+    'NOVERA LABS | Custom Technology Solutions Pharmacy Order Processing & Fulfilment System',
+};
+
+function renderQuotationBullets(text: string | undefined) {
+  if (!text) return null;
+  const lines = text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+  return (
+    <ul className="ws-q-bullets">
+      {lines.map((line, idx) => {
+        const clean = line.replace(/^[•\-\*]\s*/, '');
+        return (
+          <li key={idx} className="ws-q-bullet-item">
+            <span className="ws-q-bullet-dot">•</span>
+            <span className="ws-q-bullet-text">{clean}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function AgreementGenerator() {
   const [step, setStep] = useState(0);
   const { data, saveDocument, busy } = useCrm();
   const [error, setError] = useState('');
-  const agencyName =
-    ((data.documents.settings?.value || {}) as { name?: string }).name ||
-    'Your workspace';
-  const [form, setForm] = useState<Record<string, string>>(() => ({
-    ...Object.fromEntries(
-      [
-        'Client Name',
-        'Company Name',
-        'Email',
-        'Phone',
-        'Address',
-        'GST Number (Optional)',
-        'Project Name',
-        'Services',
-        'Start Date',
-        'End Date',
-        'Monthly Fee',
-        'Payment Terms',
-        'Notice Period',
-        'Tax Rate',
-      ].map((key) => [key, '']),
-    ),
-    ...((data.documents['agreement-draft']?.value || {}) as Record<
+  const [notification, setNotification] = useState('');
+
+  const [form, setForm] = useState<Record<string, string>>(() => {
+    const saved = (data.documents['agreement-draft']?.value || {}) as Record<
       string,
       string
-    >),
-  }));
+    >;
+    return {
+      ...NOVERA_BOILERPLATE,
+      ...saved,
+      clientName:
+        saved.clientName ||
+        saved['Client Name'] ||
+        saved['Company Name'] ||
+        NOVERA_BOILERPLATE.clientName,
+      projectName:
+        saved.projectName ||
+        saved['Project Name'] ||
+        NOVERA_BOILERPLATE.projectName,
+    };
+  });
 
   const steps = [
-    'Client Details',
-    'Project & Services',
-    'Commercials',
+    'Quotation & Client',
+    'Scope & Deliverables',
+    'Commercials & Terms',
     'Review & Generate',
   ];
-  const fields = [
-    [
-      'Client Name',
-      'Company Name',
-      'Email',
-      'Phone',
-      'Address',
-      'GST Number (Optional)',
-    ],
-    ['Project Name', 'Services', 'Start Date', 'End Date'],
-    ['Monthly Fee', 'Payment Terms', 'Notice Period', 'Tax Rate'],
-  ];
-  const agreement = `MASTER SERVICES AGREEMENT\n\n${agencyName} × ${form['Client Name']}\n\nClient: ${form['Company Name']}\nEmail: ${form.Email}\nPhone: ${form.Phone}\nAddress: ${form.Address}\n\nProject: ${form['Project Name']}\nServices: ${form.Services}\nTerm: ${form['Start Date']} – ${form['End Date']}\nMonthly Fee: ${form['Monthly Fee']}\nTax Rate: ${form['Tax Rate']}\nPayment Terms: ${form['Payment Terms']}\nNotice Period: ${form['Notice Period']}\n\nClient signature: ____________________\nAgency signature: ____________________\n\nINVOICE DRAFT\nClient: ${form['Company Name']}\nDescription: ${form['Project Name']}\nMonthly Fee: ${form['Monthly Fee']}\nTax: ${form['Tax Rate']}\nPayment Terms: ${form['Payment Terms']}\n`;
+
+  const handleSaveDraft = async () => {
+    try {
+      await saveDocument('agreement-draft', form);
+      setNotification('Draft saved successfully to CRM documents!');
+      setTimeout(() => setNotification(''), 3500);
+      setError('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Save failed.');
+    }
+  };
+
+  const agreementText = `QUOTATION / MASTER SERVICE PROPOSAL
+Quotation No.: ${form.quotationNo}
+Date: ${form.date}
+Prepared For: ${form.clientName}
+Project: ${form.projectName}
+Issued By: ${form.agencyName}
+
+DELIVERABLES:
+${form.deliverablesSummary}
+
+1. CUSTOMER WEB APPLICATION:
+${form.scope1Items}
+
+2. ADMIN DASHBOARD:
+${form.scope2Items}
+
+3. CHEMIST PORTAL:
+${form.scope3Items}
+
+4. MEDICINE DATA & PRICING:
+${form.scope4Items}
+
+5. NOTIFICATIONS, SECURITY & AUDIT:
+${form.scope5Items}
+
+EXCLUSIONS & THIRD-PARTY COSTS:
+${form.exclusions}
+
+COMMERCIALS:
+Total Project Value: ${form.totalProjectValue}
+Payment Terms: ${form.paymentTerms}
+
+KEY TERMS:
+${form.keyTerms}
+
+${form.footerText}
+`;
+
   return (
     <>
-      <Heading title="Agreement Generator" />
-      <p className="ws-hint">
-        This saves your draft and downloads a text copy. Use the Records tab to
-        create the agreement and Finance to create an invoice.
-      </p>
-      {error && <p role="alert">{error}</p>}
-      {busy && <p>Saving draft…</p>}
+      <div className="ws-generator-header">
+        <div>
+          <Heading title="Agreement & Quotation Generator" />
+          <p className="ws-hint">
+            Prefilled with the Novera Labs quotation boilerplate. Modify details
+            below or print directly to PDF.
+          </p>
+        </div>
+        <div className="ws-generator-toolbar">
+          <Button
+            type="button"
+            variant="outline"
+            className="ws-toolbar-btn ws-btn-preset"
+            onClick={() => {
+              setForm({ ...NOVERA_BOILERPLATE });
+              setNotification('Loaded Novera Labs quotation boilerplate!');
+              setTimeout(() => setNotification(''), 3500);
+            }}
+          >
+            <Sparkles size={14} className="text-amber-500 mr-1.5" />
+            Load Novera Preset
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="ws-toolbar-btn"
+            onClick={() => window.print()}
+          >
+            <Printer size={14} className="text-sky-500 mr-1.5" />
+            Print / Save PDF
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="ws-toolbar-btn"
+            onClick={handleSaveDraft}
+          >
+            <Download size={14} className="text-emerald-500 mr-1.5" />
+            Save Draft
+          </Button>
+        </div>
+      </div>
+
+      {notification && (
+        <div className="ws-banner-success">
+          <FileCheck2 size={16} />
+          <span>{notification}</span>
+        </div>
+      )}
+      {error && <p className="ws-banner-error" role="alert">{error}</p>}
+      {busy && <p className="ws-hint">Saving draft…</p>}
+
       <div className="ws-agreement-grid">
         <section>
           <div className="ws-steps">
@@ -1109,114 +1626,531 @@ function AgreementGenerator() {
                 key={label}
                 className={step === i ? 'selected' : ''}
                 onClick={() => setStep(i)}
+                type="button"
               >
                 <span>{i + 1}</span>
                 {label}
-                {i < 3 && <ChevronRight size={12} />}
+                {i < steps.length - 1 && <ChevronRight size={12} />}
               </button>
             ))}
           </div>
-          <Panel title={step === 0 ? 'Client Information' : steps[step]}>
-            {step < 3 ? (
+
+          <Panel title={steps[step]}>
+            {step === 0 && (
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  setStep(step + 1);
+                  setStep(1);
                 }}
               >
                 <div className="ws-form-grid">
-                  {fields[step].map((field) => (
-                    <label key={field}>
-                      {field}
-                      {!field.includes('Optional') && <em> *</em>}
-                      <Input
-                        required={!field.includes('Optional')}
-                        type={field === 'Email' ? 'email' : 'text'}
-                        value={form[field] || ''}
-                        onChange={(e) =>
-                          setForm({ ...form, [field]: e.target.value })
-                        }
-                      />
-                    </label>
-                  ))}
+                  <label>
+                    Quotation No. <em>*</em>
+                    <Input
+                      required
+                      value={form.quotationNo || ''}
+                      onChange={(e) =>
+                        setForm({ ...form, quotationNo: e.target.value })
+                      }
+                      placeholder="e.g. QT-2026-101"
+                    />
+                  </label>
+                  <label>
+                    Date <em>*</em>
+                    <Input
+                      required
+                      value={form.date || ''}
+                      onChange={(e) =>
+                        setForm({ ...form, date: e.target.value })
+                      }
+                      placeholder="e.g. 18 Sept 2026"
+                    />
+                  </label>
+                  <label>
+                    Client Name (Prepared For) <em>*</em>
+                    <Input
+                      required
+                      value={form.clientName || ''}
+                      onChange={(e) =>
+                        setForm({ ...form, clientName: e.target.value })
+                      }
+                      placeholder="e.g. ZaapMed"
+                    />
+                  </label>
+                  <label>
+                    Agency / Issuer Name <em>*</em>
+                    <Input
+                      required
+                      value={form.agencyName || ''}
+                      onChange={(e) =>
+                        setForm({ ...form, agencyName: e.target.value })
+                      }
+                      placeholder="e.g. NOVERA LABS"
+                    />
+                  </label>
+                  <label className="ws-col-span-full">
+                    Project Name <em>*</em>
+                    <Input
+                      required
+                      value={form.projectName || ''}
+                      onChange={(e) =>
+                        setForm({ ...form, projectName: e.target.value })
+                      }
+                      placeholder="e.g. Pharmacy Order Processing & Fulfilment System"
+                    />
+                  </label>
+                  <label className="ws-col-span-full">
+                    Deliverables Highlight <em>*</em>
+                    <Input
+                      required
+                      value={form.deliverablesSummary || ''}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          deliverablesSummary: e.target.value,
+                        })
+                      }
+                      placeholder="e.g. Customer Web App · Admin Dashboard · Chemist Portal"
+                    />
+                  </label>
                 </div>
                 <div className="ws-form-footer">
-                  {step > 0 && (
-                    <Action secondary onClick={() => setStep(step - 1)}>
-                      Back
-                    </Action>
-                  )}
                   <Action type="submit">
-                    Continue
+                    Continue to Scope
                     <ChevronRight size={14} />
                   </Action>
                 </div>
               </form>
-            ) : (
-              <>
+            )}
+
+            {step === 1 && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setStep(2);
+                }}
+              >
+                <div className="ws-form-vertical">
+                  <div className="ws-scope-edit-group">
+                    <label>
+                      <strong>Scope 1 Title</strong>
+                      <Input
+                        value={form.scope1Title || ''}
+                        onChange={(e) =>
+                          setForm({ ...form, scope1Title: e.target.value })
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>Scope 1 Deliverables (one bullet per line)</span>
+                      <Textarea
+                        rows={4}
+                        value={form.scope1Items || ''}
+                        onChange={(e) =>
+                          setForm({ ...form, scope1Items: e.target.value })
+                        }
+                      />
+                    </label>
+                  </div>
+
+                  <div className="ws-scope-edit-group">
+                    <label>
+                      <strong>Scope 2 Title</strong>
+                      <Input
+                        value={form.scope2Title || ''}
+                        onChange={(e) =>
+                          setForm({ ...form, scope2Title: e.target.value })
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>Scope 2 Deliverables (one bullet per line)</span>
+                      <Textarea
+                        rows={4}
+                        value={form.scope2Items || ''}
+                        onChange={(e) =>
+                          setForm({ ...form, scope2Items: e.target.value })
+                        }
+                      />
+                    </label>
+                  </div>
+
+                  <div className="ws-scope-edit-group">
+                    <label>
+                      <strong>Scope 3 Title</strong>
+                      <Input
+                        value={form.scope3Title || ''}
+                        onChange={(e) =>
+                          setForm({ ...form, scope3Title: e.target.value })
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>Scope 3 Deliverables (one bullet per line)</span>
+                      <Textarea
+                        rows={4}
+                        value={form.scope3Items || ''}
+                        onChange={(e) =>
+                          setForm({ ...form, scope3Items: e.target.value })
+                        }
+                      />
+                    </label>
+                  </div>
+
+                  <div className="ws-scope-edit-group">
+                    <label>
+                      <strong>Scope 4 Title</strong>
+                      <Input
+                        value={form.scope4Title || ''}
+                        onChange={(e) =>
+                          setForm({ ...form, scope4Title: e.target.value })
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>Scope 4 Deliverables (one bullet per line)</span>
+                      <Textarea
+                        rows={4}
+                        value={form.scope4Items || ''}
+                        onChange={(e) =>
+                          setForm({ ...form, scope4Items: e.target.value })
+                        }
+                      />
+                    </label>
+                  </div>
+
+                  <div className="ws-scope-edit-group">
+                    <label>
+                      <strong>Scope 5 Title</strong>
+                      <Input
+                        value={form.scope5Title || ''}
+                        onChange={(e) =>
+                          setForm({ ...form, scope5Title: e.target.value })
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>Scope 5 Deliverables (one bullet per line)</span>
+                      <Textarea
+                        rows={4}
+                        value={form.scope5Items || ''}
+                        onChange={(e) =>
+                          setForm({ ...form, scope5Items: e.target.value })
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="ws-form-footer">
+                  <Action secondary onClick={() => setStep(0)}>
+                    Back
+                  </Action>
+                  <Action type="submit">
+                    Continue to Commercials
+                    <ChevronRight size={14} />
+                  </Action>
+                </div>
+              </form>
+            )}
+
+            {step === 2 && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setStep(3);
+                }}
+              >
+                <div className="ws-form-grid">
+                  <label>
+                    Total Project Value <em>*</em>
+                    <Input
+                      required
+                      value={form.totalProjectValue || ''}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          totalProjectValue: e.target.value,
+                        })
+                      }
+                      placeholder="e.g. ₹2,00,000"
+                    />
+                  </label>
+                  <label className="ws-col-span-full">
+                    Payment Terms <em>*</em>
+                    <Input
+                      required
+                      value={form.paymentTerms || ''}
+                      onChange={(e) =>
+                        setForm({ ...form, paymentTerms: e.target.value })
+                      }
+                      placeholder="e.g. 40% Advance: ₹80,000 | 30% Milestone: ₹60,000 | 30% Final: ₹60,000"
+                    />
+                  </label>
+                  <label className="ws-col-span-full">
+                    Exclusions & Third-Party Costs
+                    <Textarea
+                      rows={4}
+                      value={form.exclusions || ''}
+                      onChange={(e) =>
+                        setForm({ ...form, exclusions: e.target.value })
+                      }
+                    />
+                  </label>
+                  <label className="ws-col-span-full">
+                    Key Terms
+                    <Textarea
+                      rows={3}
+                      value={form.keyTerms || ''}
+                      onChange={(e) =>
+                        setForm({ ...form, keyTerms: e.target.value })
+                      }
+                    />
+                  </label>
+                  <label className="ws-col-span-full">
+                    Footer Credit / Tagline
+                    <Input
+                      value={form.footerText || ''}
+                      onChange={(e) =>
+                        setForm({ ...form, footerText: e.target.value })
+                      }
+                    />
+                  </label>
+                </div>
+                <div className="ws-form-footer">
+                  <Action secondary onClick={() => setStep(1)}>
+                    Back
+                  </Action>
+                  <Action type="submit">
+                    Review & Generate
+                    <ChevronRight size={14} />
+                  </Action>
+                </div>
+              </form>
+            )}
+
+            {step === 3 && (
+              <div className="ws-review-panel">
                 <dl className="ws-review">
-                  {Object.entries(form).map(([key, value]) => (
-                    <div key={key}>
-                      <dt>{key}</dt>
-                      <dd>{value}</dd>
-                    </div>
-                  ))}
+                  <div>
+                    <dt>Quotation</dt>
+                    <dd>
+                      {form.quotationNo} · {form.date}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Client</dt>
+                    <dd>{form.clientName}</dd>
+                  </div>
+                  <div>
+                    <dt>Project</dt>
+                    <dd>{form.projectName}</dd>
+                  </div>
+                  <div>
+                    <dt>Deliverables</dt>
+                    <dd>{form.deliverablesSummary}</dd>
+                  </div>
+                  <div>
+                    <dt>Total Value</dt>
+                    <dd>
+                      <strong>{form.totalProjectValue}</strong>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Payment Terms</dt>
+                    <dd>{form.paymentTerms}</dd>
+                  </div>
                 </dl>
-                <Action
-                  onClick={async () => {
-                    try {
-                      await saveDocument('agreement-draft', form);
+
+                <div className="ws-review-actions">
+                  <Button
+                    type="button"
+                    className="ws-btn-primary"
+                    onClick={() => window.print()}
+                  >
+                    <Printer size={15} className="mr-2" />
+                    Print / Export PDF Now
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleSaveDraft}
+                  >
+                    <Download size={15} className="mr-2" />
+                    Save to CRM Documents
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() =>
                       downloadText(
-                        'agreement-and-invoice-draft.txt',
-                        agreement,
-                      );
-                      setError('');
-                    } catch (error) {
-                      setError(
-                        error instanceof Error ? error.message : 'Save failed.',
-                      );
+                        `${form.quotationNo || 'quotation'}-${form.clientName || 'client'}.txt`,
+                        agreementText,
+                      )
                     }
-                  }}
-                >
-                  <Download size={14} />
-                  Save & Download Draft
-                </Action>
-              </>
+                  >
+                    Download Plain Text
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="text-amber-600"
+                    onClick={() => {
+                      setForm({ ...NOVERA_BOILERPLATE });
+                      setNotification('Reset to Novera Labs template!');
+                      setTimeout(() => setNotification(''), 3500);
+                    }}
+                  >
+                    <RotateCcw size={14} className="mr-1.5" />
+                    Reset to Boilerplate
+                  </Button>
+                </div>
+              </div>
             )}
           </Panel>
         </section>
-        <Panel title="Agreement Preview">
-          <div className="ws-paper">
-            <div className="ws-paper-brand">
-              <strong>{agencyName}</strong>
-              <span className="ws-client-logo">
-                <Building2 size={22} />
+
+        {/* Live Preview Paper */}
+        <Panel title="Quotation Live Preview">
+          <div className="ws-quotation-paper" id="quotation-print-area">
+            {/* Header */}
+            <div className="ws-q-header">
+              <h1 className="ws-q-title">QUOTATION</h1>
+              <div className="ws-q-brand-badge">
+                <svg
+                  className="ws-q-logo-mark"
+                  width="28"
+                  height="22"
+                  viewBox="0 0 32 28"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path d="M4 22L14 6H19.5L9.5 22H4Z" fill="white" />
+                  <path
+                    d="M14 22L24 6H29L19 22H14Z"
+                    fill="white"
+                    opacity="0.9"
+                  />
+                </svg>
+                <span className="ws-q-brand-name">
+                  {form.agencyName || 'NOVERA LABS'}
+                </span>
+              </div>
+            </div>
+
+            {/* Quotation Details & Prepared For */}
+            <div className="ws-q-meta-grid">
+              <div className="ws-q-meta-col">
+                <div className="ws-q-meta-heading">QUOTATION DETAILS</div>
+                <div className="ws-q-meta-row">
+                  <span className="ws-q-meta-label">Quotation No.:</span>
+                  <span className="ws-q-meta-value">{form.quotationNo}</span>
+                </div>
+                <div className="ws-q-meta-row">
+                  <span className="ws-q-meta-label">Date:</span>
+                  <span className="ws-q-meta-value">{form.date}</span>
+                </div>
+              </div>
+              <div className="ws-q-meta-col">
+                <div className="ws-q-meta-heading">PREPARED FOR:</div>
+                <div className="ws-q-meta-row underline-row">
+                  <span className="ws-q-meta-label">Client Name</span>
+                  <span className="ws-q-underline-val">{form.clientName}</span>
+                </div>
+                <div className="ws-q-meta-row underline-row">
+                  <span className="ws-q-meta-label">Project Name</span>
+                  <span className="ws-q-underline-val">{form.projectName}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="ws-q-divider" />
+
+            {/* Deliverables summary */}
+            <div className="ws-q-deliverables">
+              <span className="ws-q-deliverables-title">Deliverables:</span>
+              <span className="ws-q-deliverables-content">
+                {form.deliverablesSummary}
               </span>
             </div>
-            <h4>MASTER SERVICES AGREEMENT</h4>
-            <p>
-              This agreement is between {agencyName} and{' '}
-              <strong>{form['Company Name']}</strong>.
-            </p>
-            <h5>01 · Scope of Services</h5>
-            <p>{form.Services}</p>
-            <h5>02 · Term & Commercials</h5>
-            <p>
-              {form['Start Date']} – {form['End Date']}
-            </p>
-            <p>
-              {form['Monthly Fee']} / month · Tax {form['Tax Rate']}
-            </p>
-            <p>{form['Payment Terms']}</p>
-            <div className="ws-signatures">
-              <span>Client Signature</span>
-              <span>Agency Signature</span>
+
+            {/* Scope Container with polygon backdrop */}
+            <div className="ws-q-scope-container">
+              <div className="ws-q-scope-watermark" aria-hidden="true" />
+
+              {/* Scope 1 */}
+              <div className="ws-q-section">
+                <div className="ws-q-section-title">{form.scope1Title}</div>
+                {renderQuotationBullets(form.scope1Items)}
+              </div>
+
+              {/* Scope 2 */}
+              <div className="ws-q-section">
+                <div className="ws-q-section-title">{form.scope2Title}</div>
+                {renderQuotationBullets(form.scope2Items)}
+              </div>
+
+              {/* Scope 3 */}
+              <div className="ws-q-section">
+                <div className="ws-q-section-title">{form.scope3Title}</div>
+                {renderQuotationBullets(form.scope3Items)}
+              </div>
+
+              {/* Scope 4 */}
+              <div className="ws-q-section">
+                <div className="ws-q-section-title">{form.scope4Title}</div>
+                {renderQuotationBullets(form.scope4Items)}
+              </div>
+
+              {/* Scope 5 */}
+              <div className="ws-q-section">
+                <div className="ws-q-section-title">{form.scope5Title}</div>
+                {renderQuotationBullets(form.scope5Items)}
+              </div>
+
+              {/* Exclusions */}
+              <div className="ws-q-section ws-q-exclusions">
+                <div className="ws-q-section-title ws-q-exclusions-title">
+                  Exclusions &amp; Third-Party Costs
+                </div>
+                {renderQuotationBullets(form.exclusions)}
+              </div>
             </div>
+
+            {/* Commercials / Total Project Value */}
+            <div className="ws-q-commercials">
+              <div className="ws-q-total-row">
+                <span className="ws-q-total-label">Total Project Value :</span>
+                <span className="ws-q-total-amount">
+                  {form.totalProjectValue}
+                </span>
+              </div>
+              <div className="ws-q-payment-terms">
+                <span className="ws-q-payment-label">Payment Terms:</span>{' '}
+                <strong>{form.paymentTerms}</strong>
+              </div>
+            </div>
+
+            {/* Key Terms Banner */}
+            <div className="ws-q-keyterms-banner">
+              <div className="ws-q-keyterms-title">Key Terms</div>
+              {renderQuotationBullets(form.keyTerms)}
+            </div>
+
+            {/* Footer Credit */}
+            <div className="ws-q-footer">{form.footerText}</div>
           </div>
-          <Action onClick={() => setStep(3)}>
-            <Download size={14} />
-            Review Agreement & Invoice
-          </Action>
+
+          <div className="ws-preview-actions">
+            <Button
+              type="button"
+              className="ws-btn-primary w-full"
+              onClick={() => window.print()}
+            >
+              <Printer size={15} className="mr-2" />
+              Print / Save as PDF
+            </Button>
+          </div>
         </Panel>
       </div>
     </>

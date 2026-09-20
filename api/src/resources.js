@@ -7,6 +7,7 @@ export const resources = {
   users:{required:['name','email'],fields:{name:'text',email:'email',job_title:'text',status:['active','away','inactive'],phone:'text'}},
   agreements:{required:['client_id','title'],fields:{client_id:'id',title:'text',type:'text',status:['Draft','Sent','Active','Expired'],start_date:'date',end_date:'date',document_url:'text'}},
   reports:{required:['client_id'],fields:{client_id:'id',weekly_reports:'text',monthly_status:['Pending','Submitted'],health:['On Track','Delayed'],submitted_at:'date'}},
+  expenses:{required:['title','amount'],fields:{title:'text',category:['Software & Tools','Salaries & Contractors','Marketing & Ads','Office & Rent','Travel & Entertainment','Utilities','Legal & Professional','Hardware & Equipment','Other'],amount:'money',date:'date',payment_method:['Credit Card','Bank Transfer','UPI','Cash','Other'],status:['Pending','Approved','Paid','Rejected'],vendor:'text',notes:'long'}},
 };
 export function validate(resource, body, create = false) {
   if (!body || Array.isArray(body) || typeof body !== 'object') throw Object.assign(new Error('Expected a JSON object.'),{status:400});

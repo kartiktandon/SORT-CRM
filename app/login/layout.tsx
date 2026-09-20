@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Welcome to SORTCRM — Your workspace awaits',
-  description: 'Sign in to your SORTCRM workspace.',
+  title: 'Welcome to NOVERA CRM — Your workspace awaits',
+  description: 'Sign in to your NOVERA CRM workspace.',
 };
 
 export default function LoginLayout({
