@@ -30,6 +30,9 @@ const isAllowedOrigin = (testOrigin) => {
   // All vercel deployments
   if (clean.endsWith('.vercel.app')) return true;
 
+  // Automatically allow all buildwithnovera.com domains & subdomains
+  if (clean.includes('buildwithnovera.com')) return true;
+
   // Handle apex and www variants (e.g. yourdomain.com vs www.yourdomain.com)
   for (const configured of configuredOrigins) {
     try {
@@ -64,12 +67,15 @@ app.use((req, res, next) => {
   next();
 });
 const asyncRoute = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
-const cookieOptions = {
-  httpOnly: true,
-  sameSite: process.env.COOKIE_SAMESITE || 'lax',
-  secure: process.env.NODE_ENV === 'production',
-  path: '/',
-  maxAge: 8 * 60 * 60 * 1000
+const getCookieOptions = (req) => {
+  const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
+  return {
+    httpOnly: true,
+    sameSite: process.env.COOKIE_SAMESITE || 'lax',
+    secure: isHttps && process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: 8 * 60 * 60 * 1000
+  };
 };
 const initExpensesTable = async () => {
   try {
@@ -134,7 +140,7 @@ app.post('/api/auth/login',asyncRoute(async(req,res)=>{
   attempts.delete(key);
   const token=randomBytes(32).toString('hex');
   await db.execute('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,DATE_ADD(NOW(),INTERVAL 8 HOUR))',[tokenHash(token),user.id]);
-  res.cookie('crm_session',token,cookieOptions);
+  res.cookie('crm_session',token,getCookieOptions(req));
   res.json({user:{id:user.id,name:user.name,email:user.email,role:user.role}});
 }));
 
@@ -152,7 +158,7 @@ app.use('/api',asyncRoute(async(req,res,next)=>{
   req.user=rows[0];next();
 }));
 app.get('/api/auth/me',(req,res)=>res.json({user:req.user}));
-app.post('/api/auth/logout',asyncRoute(async(req,res)=>{await db.execute('DELETE FROM sessions WHERE token_hash=?',[tokenHash(readSession(req))]);res.clearCookie('crm_session',{...cookieOptions,maxAge:undefined});res.sendStatus(204);}));
+app.post('/api/auth/logout',asyncRoute(async(req,res)=>{await db.execute('DELETE FROM sessions WHERE token_hash=?',[tokenHash(readSession(req))]);res.clearCookie('crm_session',{...getCookieOptions(req),maxAge:undefined});res.sendStatus(204);}));
 const publicUsers='id,name,email,role,job_title,status,phone,created_at,updated_at';
 app.get('/api/bootstrap',asyncRoute(async(req,res)=>{
   const data={};
