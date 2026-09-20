@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { db } from './db.js';
 import { hashPassword, verifyPassword, tokenHash, readSession } from './security.js';
 import { resources, validate } from './resources.js';
+import { verifyWebhook, handleWebhook, handleTestLead, getMetaStatus } from './meta.js';
 
 const app=express();
 app.disable('x-powered-by');
@@ -60,6 +61,13 @@ app.post('/api/auth/login',asyncRoute(async(req,res)=>{
   res.cookie('crm_session',token,cookieOptions);
   res.json({user:{id:user.id,name:user.name,email:user.email,role:user.role}});
 }));
+
+// ── Meta (Facebook & Instagram) Lead Ads Webhooks ────────────
+app.get('/api/webhooks/facebook', verifyWebhook);
+app.post('/api/webhooks/facebook', asyncRoute(handleWebhook));
+app.post('/api/webhooks/facebook/test', asyncRoute(handleTestLead));
+app.get('/api/integrations/meta/status', getMetaStatus);
+
 app.use('/api',asyncRoute(async(req,res,next)=>{
   const token=readSession(req);
   if(!/^[a-f0-9]{64}$/.test(token))return res.status(401).json({error:'Please sign in.'});

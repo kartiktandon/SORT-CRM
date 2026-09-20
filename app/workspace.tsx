@@ -4,11 +4,14 @@ import { useId, useState, type ReactNode } from 'react';
 import {
   ArrowLeft,
   Building2,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock3,
+  Copy,
   DollarSign,
   Download,
+  ExternalLink,
   FileCheck2,
   LayoutGrid,
   List,
@@ -2349,23 +2352,185 @@ function AssetsView({ projectId }: { projectId: number }) {
   );
 }
 function SettingsView() {
-  const { data, user, saveDocument, busy } = useCrm();
+  const { data, user, saveDocument, busy, refresh } = useCrm();
   const [tab, setTab] = useState('Workspace');
   const [saved, setSaved] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [testStatus, setTestStatus] = useState<string>('');
+  const [testBusy, setTestBusy] = useState(false);
   const current = (data.documents.settings?.value || {}) as { name?: string };
   const [name, setName] = useState(current.name || '');
+
+  const webhookUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/api/webhooks/facebook`
+      : 'https://your-crm-domain.com/api/webhooks/facebook';
+  const verifyToken = 'novera_lead_secret_2026';
+
+  const copyToClipboard = (text: string, key: string) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+    }
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2500);
+  };
+
+  const handleSendTestLead = async () => {
+    setTestBusy(true);
+    setTestStatus('Sending test Facebook lead to CRM...');
+    try {
+      const res = await fetch('/api/webhooks/facebook/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Priya Sharma (Facebook Ad)',
+          email: 'priya.sharma@example.com',
+          phone: '+91 98201 54321',
+          city: 'Mumbai',
+          company: 'Sharma Healthcare',
+        }),
+      });
+      const json = (await res.json()) as { error?: string };
+      if (res.ok) {
+        setTestStatus('✅ Test lead received and saved to Leads Explorer!');
+        await refresh();
+      } else {
+        setTestStatus(`❌ Error: ${json.error || 'Failed to trigger test lead.'}`);
+      }
+    } catch (err) {
+      setTestStatus(
+        `❌ Failed: ${err instanceof Error ? err.message : 'Network error'}`,
+      );
+    } finally {
+      setTestBusy(false);
+    }
+  };
+
   return (
     <>
       <Heading title="Settings" />
       <Tabs
-        items={['Workspace', 'Notifications', 'Integrations']}
+        items={['Workspace', 'Integrations', 'Notifications']}
         active={tab}
         onChange={setTab}
       />
       {tab === 'Integrations' ? (
-        <Panel title="Connected Services">
-          <p>CRM API · Connected to your workspace database</p>
-        </Panel>
+        <div className="ws-integrations-container">
+          <Panel title="Meta (Facebook & Instagram) Lead Ads Webhook">
+            <div className="ws-meta-integration-card">
+              <div className="ws-meta-status-banner">
+                <div className="flex items-center gap-2">
+                  <span className="ws-fin-dot green" />
+                  <strong className="text-sm">Webhook Listener is Active</strong>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  Ready to receive real-time leads from Facebook & Instagram Ad Forms
+                </span>
+              </div>
+
+              <div className="ws-meta-fields-grid mt-4">
+                <div className="ws-meta-field">
+                  <label className="text-xs font-semibold text-slate-700 mb-1 block">
+                    Webhook Callback URL
+                  </label>
+                  <div className="ws-copy-input-wrap flex gap-2">
+                    <Input readOnly value={webhookUrl} className="font-mono text-xs" />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToClipboard(webhookUrl, 'url')}
+                    >
+                      {copiedKey === 'url' ? (
+                        <CheckCircle2 size={14} className="text-emerald-600" />
+                      ) : (
+                        <Copy size={14} />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="ws-meta-field mt-3">
+                  <label className="text-xs font-semibold text-slate-700 mb-1 block">
+                    Verify Token
+                  </label>
+                  <div className="ws-copy-input-wrap flex gap-2">
+                    <Input
+                      readOnly
+                      value={verifyToken}
+                      className="font-mono text-xs"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToClipboard(verifyToken, 'token')}
+                    >
+                      {copiedKey === 'token' ? (
+                        <CheckCircle2 size={14} className="text-emerald-600" />
+                      ) : (
+                        <Copy size={14} />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="ws-meta-test-box mt-5 p-4 rounded-lg bg-slate-50 border border-slate-200">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900">
+                      Test Meta Ingestion Simulator
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Send a mock Facebook Lead Ad submission into your CRM to verify the pipeline.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    className="ws-btn-primary"
+                    disabled={testBusy}
+                    onClick={handleSendTestLead}
+                  >
+                    <Sparkles size={14} className="mr-1.5" />
+                    {testBusy ? 'Sending...' : '⚡ Send Test Facebook Lead'}
+                  </Button>
+                </div>
+                {testStatus && (
+                  <p className="text-xs mt-3 font-medium text-slate-700">
+                    {testStatus}
+                  </p>
+                )}
+              </div>
+
+              <div className="ws-meta-guide mt-6 pt-5 border-t border-slate-200">
+                <h4 className="text-xs font-bold text-slate-900 mb-2">
+                  How to link your Facebook Ad Account (3 Simple Steps):
+                </h4>
+                <ol className="text-xs text-slate-600 space-y-1.5 list-decimal pl-4">
+                  <li>
+                    Go to{' '}
+                    <a
+                      href="https://developers.facebook.com/apps"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-600 underline font-medium inline-flex items-center gap-1"
+                    >
+                      Meta for Developers <ExternalLink size={11} />
+                    </a>{' '}
+                    and select your app.
+                  </li>
+                  <li>
+                    Under <strong>Webhooks</strong>, select the <strong>Page</strong> object and click <strong>Subscribe to this object</strong>.
+                  </li>
+                  <li>
+                    Paste the <strong>Callback URL</strong> and <strong>Verify Token</strong> from above, then subscribe to the <code>leadgen</code> field.
+                  </li>
+                </ol>
+              </div>
+            </div>
+          </Panel>
+        </div>
       ) : tab === 'Notifications' ? (
         <p className="ws-empty">Notification delivery is not configured yet.</p>
       ) : (
