@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { randomBytes } from 'node:crypto';
-import { db } from './db.js';
+import { db, connectionOptions } from './db.js';
 import { hashPassword, verifyPassword, tokenHash, readSession } from './security.js';
 import { resources, validate } from './resources.js';
 import { verifyWebhook, handleWebhook, handleTestLead, getMetaStatus } from './meta.js';
@@ -65,7 +65,29 @@ const initExpensesTable = async () => {
 };
 initExpensesTable();
 
-app.get('/api/health',asyncRoute(async(_req,res)=>{await db.query('SELECT 1');await initExpensesTable();res.json({ok:true,database:'connected'});}));
+app.get('/api/health', async (_req, res) => {
+  try {
+    await db.query('SELECT 1');
+    await initExpensesTable();
+    res.json({
+      ok: true,
+      database: 'connected',
+      host: connectionOptions.host,
+      database_name: connectionOptions.database,
+      ssl: !!connectionOptions.ssl
+    });
+  } catch (err) {
+    console.error('Health check database error:', err);
+    res.status(500).json({
+      ok: false,
+      error: 'Database connection failed',
+      message: err.message,
+      code: err.code,
+      host: connectionOptions.host,
+      user: connectionOptions.user
+    });
+  }
+});
 const attempts=new Map();
 setInterval(()=>{for(const [key,value] of attempts)if(value.until<Date.now())attempts.delete(key);},60000).unref();
 const dummyHash=await hashPassword(randomBytes(24).toString('hex'));
