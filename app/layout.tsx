@@ -12,6 +12,8 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+export const dynamic = 'force-static';
+
 export const metadata: Metadata = {
   metadataBase: new URL('https://short-marketing-crm.stable-cod-4752.chatgpt.site'),
   title: 'Novera CRM — Agency command center',

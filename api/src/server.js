@@ -8,15 +8,40 @@ import { verifyWebhook, handleWebhook, handleTestLead, getMetaStatus } from './m
 
 const app=express();
 app.disable('x-powered-by');
-const origin=(process.env.FRONTEND_ORIGIN || 'http://localhost:3000').replace(/\/+$/, '');
-app.use(cors({origin,credentials:true}));
-app.use(express.json({limit:'1mb'}));
-app.use((req,res,next)=>{
-  res.set('Cache-Control','no-store');
-  if(!['GET','HEAD','OPTIONS'].includes(req.method) && req.headers.origin && req.headers.origin!==origin)return res.status(403).json({error:'Origin not allowed.'});
+const origin = (process.env.FRONTEND_ORIGIN || 'http://localhost:3000').replace(/\/+$/, '');
+const isAllowedOrigin = (testOrigin) => {
+  if (!testOrigin) return true;
+  if (testOrigin === origin) return true;
+  if (testOrigin === 'http://localhost:3000' || testOrigin === 'http://127.0.0.1:3000') return true;
+  if (testOrigin.endsWith('.vercel.app')) return true;
+  return false;
+};
+app.use(cors({
+  origin: (reqOrigin, callback) => {
+    if (!reqOrigin || isAllowedOrigin(reqOrigin)) {
+      callback(null, true);
+    } else {
+      callback(null, false);
+    }
+  },
+  credentials: true
+}));
+app.use(express.json({ limit: '1mb' }));
+app.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !req.path.startsWith('/api/webhooks') && req.headers.origin && !isAllowedOrigin(req.headers.origin)) {
+    return res.status(403).json({ error: 'Origin not allowed.' });
+  }
   next();
 });
-const asyncRoute=fn=>(req,res,next)=>Promise.resolve(fn(req,res,next)).catch(next);
+const asyncRoute = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+const cookieOptions = {
+  httpOnly: true,
+  sameSite: process.env.COOKIE_SAMESITE || 'lax',
+  secure: process.env.NODE_ENV === 'production',
+  path: '/',
+  maxAge: 8 * 60 * 60 * 1000
+};
 const initExpensesTable = async () => {
   try {
     await db.query(`
@@ -130,5 +155,9 @@ app.use((error,_req,res,_next)=>{
   console.error('API error:',code||error.message);
   res.status(error.status||503).json({error:error.status?error.message:'Database unavailable. Check the API database configuration.'});
 });
-const server=app.listen(Number(process.env.PORT||4000),'127.0.0.1',()=>console.log(`CRM API: http://127.0.0.1:${process.env.PORT||4000}`));
-for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>server.close(()=>{db.end().finally(()=>process.exit(0));}));
+export default app;
+
+if (!process.env.VERCEL) {
+  const server = app.listen(Number(process.env.PORT || 4000), '127.0.0.1', () => console.log(`CRM API: http://127.0.0.1:${process.env.PORT || 4000}`));
+  for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => server.close(() => { db.end().finally(() => process.exit(0)); }));
+}

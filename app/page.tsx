@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-static';
+
 import { useState } from 'react';
 import WorkspaceContent from './workspace';
 import { CrmProvider, useCrm, useRecords } from './crm-data';
