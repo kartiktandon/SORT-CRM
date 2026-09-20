@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
+    "build": "node -e \"process.exit(0)\"",
+    "build:vercel": "node -e \"process.exit(0)\"",
     "db:setup": "node scripts/setup-db.js",
     "admin:create": "node scripts/create-admin.js",
     "test": "node --test test/*.test.js",
