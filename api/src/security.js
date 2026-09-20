@@ -14,5 +14,9 @@ export async function verifyPassword(password, stored) {
 }
 export const tokenHash = token => createHash('sha256').update(token).digest('hex');
 export function readSession(req) {
-  return (req.headers.cookie || '').split(';').map(part => part.trim()).find(part => part.startsWith('crm_session='))?.slice(12) || '';
+  const fromCookie = (req.headers.cookie || '').split(';').map(part => part.trim()).find(part => part.startsWith('crm_session='))?.slice(12);
+  if (fromCookie) return fromCookie;
+  const auth = req.headers.authorization || '';
+  if (auth.toLowerCase().startsWith('bearer ')) return auth.slice(7).trim();
+  return typeof req.headers['x-session-token'] === 'string' ? req.headers['x-session-token'].trim() : '';
 }

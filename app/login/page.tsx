@@ -169,13 +169,16 @@ export default function LoginPage() {
                       setBusy(true);
                       setMessage('');
                       try {
-                        await api('/auth/login', {
+                        const res = await api<{ user: unknown; token?: string }>('/auth/login', {
                           method: 'POST',
                           body: JSON.stringify({
                             email: form.get('email'),
                             password: form.get('password'),
                           }),
                         });
+                        if (res?.token && typeof window !== 'undefined') {
+                          localStorage.setItem('crm_session', res.token);
+                        }
                         router.replace('/');
                       } catch (error) {
                         setMessage(

@@ -141,7 +141,7 @@ app.post('/api/auth/login',asyncRoute(async(req,res)=>{
   const token=randomBytes(32).toString('hex');
   await db.execute('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,DATE_ADD(NOW(),INTERVAL 8 HOUR))',[tokenHash(token),user.id]);
   res.cookie('crm_session',token,getCookieOptions(req));
-  res.json({user:{id:user.id,name:user.name,email:user.email,role:user.role}});
+  res.json({user:{id:user.id,name:user.name,email:user.email,role:user.role},token});
 }));
 
 // ── Meta (Facebook & Instagram) Lead Ads Webhooks ────────────

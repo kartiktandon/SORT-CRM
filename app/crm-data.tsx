@@ -45,8 +45,10 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const handleError = useCallback(
     (error: unknown) => {
-      if (error instanceof ApiError && error.status === 401)
+      if (error instanceof ApiError && error.status === 401) {
+        if (typeof window !== 'undefined') localStorage.removeItem('crm_session');
         router.replace('/login');
+      }
       setError(error instanceof Error ? error.message : 'Unable to connect.');
     },
     [router],
@@ -156,6 +158,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     }
   };
   const logout = async () => {
+    if (typeof window !== 'undefined') localStorage.removeItem('crm_session');
     try {
       await api('/auth/logout', { method: 'POST' });
       setState(null);
