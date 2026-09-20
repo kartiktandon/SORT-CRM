@@ -8,12 +8,41 @@ import { verifyWebhook, handleWebhook, handleTestLead, getMetaStatus } from './m
 
 const app=express();
 app.disable('x-powered-by');
-const origin = (process.env.FRONTEND_ORIGIN || 'http://localhost:3000').replace(/\/+$/, '');
+const rawOrigins = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
+const configuredOrigins = rawOrigins
+  .split(',')
+  .map(o => o.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
+
 const isAllowedOrigin = (testOrigin) => {
   if (!testOrigin) return true;
-  if (testOrigin === origin) return true;
-  if (testOrigin === 'http://localhost:3000' || testOrigin === 'http://127.0.0.1:3000') return true;
-  if (testOrigin.endsWith('.vercel.app')) return true;
+  const clean = testOrigin.replace(/\/+$/, '');
+
+  // Allow all if FRONTEND_ORIGIN is wildcard
+  if (configuredOrigins.includes('*')) return true;
+
+  // Exact match with any configured origin
+  if (configuredOrigins.includes(clean)) return true;
+
+  // Localhost development
+  if (clean === 'http://localhost:3000' || clean === 'http://127.0.0.1:3000') return true;
+
+  // All vercel deployments
+  if (clean.endsWith('.vercel.app')) return true;
+
+  // Handle apex and www variants (e.g. yourdomain.com vs www.yourdomain.com)
+  for (const configured of configuredOrigins) {
+    try {
+      const parsedConfig = new URL(configured);
+      const parsedTest = new URL(clean);
+      const configHost = parsedConfig.hostname.replace(/^www\./, '');
+      const testHost = parsedTest.hostname.replace(/^www\./, '');
+      if (configHost === testHost) return true;
+    } catch {
+      // ignore parse errors
+    }
+  }
+
   return false;
 };
 app.use(cors({
