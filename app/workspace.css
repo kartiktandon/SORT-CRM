@@ -550,6 +550,12 @@
 .ws-content .ws-link:hover {
   color: var(--ws-purple-dark);
 }
+.ws-content .ws-link.danger {
+  color: #ef4444;
+}
+.ws-content .ws-link.danger:hover {
+  color: #b91c1c;
+}
 .ws-content .ws-outline-link {
   padding: 7px 12px;
   border: 1px solid #c7d2fe;

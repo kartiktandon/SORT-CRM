@@ -468,7 +468,7 @@ function RecordEditor({
   record: Partial<RecordData>;
   onClose: () => void;
 }) {
-  const { data, save, busy } = useCrm();
+  const { data, save, remove, user, busy } = useCrm();
   const definition = definitions[resource];
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(
@@ -586,6 +586,31 @@ function RecordEditor({
           ))}
           {error && <p role="alert">{error}</p>}
           <div className="ws-actions">
+            {Boolean(
+              record.id &&
+                (resource === 'expenses' ||
+                  resource === 'leads' ||
+                  user.role === 'admin'),
+            ) && (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={busy}
+                onClick={async () => {
+                  if (
+                    window.confirm(
+                      `Are you sure you want to delete this ${definition.singular.toLowerCase()}?`,
+                    )
+                  ) {
+                    await remove(resource, record.id!);
+                    onClose();
+                  }
+                }}
+                style={{ marginRight: 'auto' }}
+              >
+                Delete
+              </Button>
+            )}
             <Button type="button" onClick={onClose} disabled={busy}>
               Cancel
             </Button>
@@ -608,7 +633,7 @@ function ResourceView({
   filter?: (row: RecordData) => boolean;
   onOpen?: (row: RecordData) => void;
 }) {
-  const { data, user } = useCrm();
+  const { data, user, remove } = useCrm();
   const all = useRecords(resource);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('All');
@@ -624,6 +649,8 @@ function ResourceView({
       (status === 'All' || row.status === status),
   );
   const canEdit = resource !== 'users' || user.role === 'admin';
+  const canDelete =
+    resource === 'leads' || resource === 'expenses' || user.role === 'admin';
   const columns = definition.fields.filter(
     (f) => f.kind !== 'textarea' && f.key !== 'document_url',
   );
@@ -679,6 +706,22 @@ function ResourceView({
             {canEdit && (
               <button className="ws-link" onClick={() => setDraft(row)}>
                 Edit
+              </button>
+            )}
+            {canDelete && (
+              <button
+                className="ws-link danger"
+                onClick={async () => {
+                  if (
+                    window.confirm(
+                      `Are you sure you want to delete this ${definition.singular.toLowerCase()}?`,
+                    )
+                  ) {
+                    await remove(resource, row.id);
+                  }
+                }}
+              >
+                Delete
               </button>
             )}
           </span>,
