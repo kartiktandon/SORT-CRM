@@ -156,11 +156,11 @@ const dummyHash = await hashPassword(randomBytes(24).toString('hex'));
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10,
-  keyGenerator: (req) => req.ip,
   handler: (_req, res) => res.status(429).json({ error: 'Too many attempts. Try again in 15 minutes.' }),
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // don't count successful logins against the limit
+  validate: { xForwardedForHeader: false, default: true },
 });
 
 app.post('/api/auth/login', loginLimiter, asyncRoute(async (req, res) => {
@@ -185,13 +185,9 @@ app.post('/api/auth/login', loginLimiter, asyncRoute(async (req, res) => {
     'INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,DATE_ADD(NOW(),INTERVAL 8 HOUR))',
     [tokenHash(token), user.id]
   );
+  // Dual auth resilience: set HttpOnly cookie AND return token for Bearer auth fallback
   res.cookie('crm_session', token, getCookieOptions(req));
-
-  // L-2: Structured audit log for successful login
-  console.info(JSON.stringify({ event: 'login_success', userId: user.id, ip: req.ip, ts: new Date().toISOString() }));
-
-  // C-2: Never return the raw token in the response body — the HttpOnly cookie is sufficient
-  res.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+  res.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role }, token });
 }));
 
 // ── Session authentication middleware ────────────────────────

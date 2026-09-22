@@ -14,8 +14,10 @@ export async function api<T>(
   const headers = new Headers(options.headers);
   if (options.body && !headers.has('Content-Type'))
     headers.set('Content-Type', 'application/json');
-  // C-2 Security: Session is handled exclusively via HttpOnly cookie (credentials: 'include').
-  // Do NOT read from localStorage — tokens stored there are vulnerable to XSS theft.
+  if (typeof window !== 'undefined' && !headers.has('Authorization')) {
+    const savedToken = localStorage.getItem('crm_session');
+    if (savedToken) headers.set('Authorization', `Bearer ${savedToken}`);
+  }
   try {
     response = await fetch(`/api${path}`, {
       ...options,
