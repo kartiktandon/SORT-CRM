@@ -34,13 +34,16 @@ app.use(helmet({
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 
-// H-2: Exact-match CORS — no wildcard *.vercel.app or string-includes tricks
-const allowedOrigins = new Set(
-  (process.env.FRONTEND_ORIGIN || 'http://localhost:3000')
+// H-2: Exact-match CORS — explicitly allow production domains + any configured in FRONTEND_ORIGIN
+const allowedOrigins = new Set([
+  'https://crm.buildwithnovera.com',
+  'https://buildwithnovera.com',
+  'https://novera-crm-backend.vercel.app',
+  ...(process.env.FRONTEND_ORIGIN || 'http://localhost:3000')
     .split(',')
     .map(o => o.trim().replace(/\/+$/, ''))
     .filter(Boolean)
-);
+]);
 // Dev-only: allow localhost variants
 if (process.env.NODE_ENV !== 'production') {
   allowedOrigins.add('http://localhost:3000');

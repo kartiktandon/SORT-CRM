@@ -6,17 +6,6 @@ import { resolve } from 'node:path';
 
 dotenv.config({ path: fileURLToPath(new URL('../.env', import.meta.url)), quiet: true });
 
-// L-4: Fail loudly at startup if required DB env vars are missing
-// Only enforce in non-development environments to allow local dev without full env setup
-const REQUIRED_DB_ENV = ['MYSQL_HOST', 'MYSQL_USER', 'MYSQL_PASSWORD', 'MYSQL_DATABASE'];
-if (process.env.NODE_ENV === 'production') {
-  for (const key of REQUIRED_DB_ENV) {
-    if (!process.env[key]) {
-      throw new Error(`[Startup] Missing required environment variable: ${key}`);
-    }
-  }
-}
-
 const DEFAULT_CA = `-----BEGIN CERTIFICATE-----
 MIIERDCCAqygAwIBAgIUHq72QwQQsTVPzId+JcNC3JGSIu0wDQYJKoZIhvcNAQEM
 BQAwOjE4MDYGA1UEAwwvYmIyODkwYTItNTg2YS00ZTIwLTg1NTAtZTFkOTJlMDk2
@@ -66,7 +55,7 @@ export const connectionOptions = {
   database: process.env.MYSQL_DATABASE || 'sort-crm-db',
   ssl: ca ? {
     ca,
-    rejectUnauthorized: true, // H-6: Actually validate the DB server's TLS certificate
+    rejectUnauthorized: process.env.MYSQL_SSL_REJECT_UNAUTHORIZED === 'true',
   } : undefined,
   connectTimeout: 10000,
 };
