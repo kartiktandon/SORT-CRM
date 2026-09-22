@@ -5,7 +5,8 @@ export const resources = {
   tasks:{required:['title'],fields:{project_id:'nullableId',assignee_id:'nullableId',title:'text',description:'long',status:['Not started','Pending','In progress','Completed'],priority:['low','medium','high'],due_date:'date',client_name:'text',assignee_name:'text'}},
   invoices:{required:['client_id','invoice_number','amount'],fields:{client_id:'id',invoice_number:'text',amount:'money',status:['Draft','Pending','Paid','Overdue'],issue_date:'date',due_date:'date'}},
   users:{required:['name','email'],fields:{name:'text',email:'email',job_title:'text',status:['active','away','inactive'],phone:'text'}},
-  agreements:{required:['client_id','title'],fields:{client_id:'id',title:'text',type:'text',status:['Draft','Sent','Active','Expired'],start_date:'date',end_date:'date',document_url:'text'}},
+  // M-5: document_url uses 'url' kind to reject javascript:/data: URIs
+  agreements:{required:['client_id','title'],fields:{client_id:'id',title:'text',type:'text',status:['Draft','Sent','Active','Expired'],start_date:'date',end_date:'date',document_url:'url'}},
   reports:{required:['client_id'],fields:{client_id:'id',weekly_reports:'text',monthly_status:['Pending','Submitted'],health:['On Track','Delayed'],submitted_at:'date'}},
   expenses:{required:['title','amount'],fields:{title:'text',category:['Software & Tools','Salaries & Contractors','Marketing & Ads','Office & Rent','Travel & Entertainment','Utilities','Legal & Professional','Hardware & Equipment','Other'],amount:'money',date:'date',payment_method:['Credit Card','Bank Transfer','UPI','Cash','Other'],status:['Pending','Approved','Paid','Rejected'],vendor:'text',notes:'long'}},
 };
@@ -23,6 +24,18 @@ export function validate(resource, body, create = false) {
     } else if (kind==='date') {
       if(value===null||value==='')value=null;
       else if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value)||!Number.isFinite(Date.parse(value))||new Date(value).toISOString().slice(0,10)!==value)fail();
+    } else if (kind==='url') {
+      // M-5: Validate URL — only allow http/https schemes, reject javascript:/data: etc.
+      if (value === null || value === '') { value = null; }
+      else {
+        if (typeof value !== 'string') fail();
+        value = value.trim();
+        if (value.length > 2048) fail();
+        try {
+          const u = new URL(value);
+          if (!['http:', 'https:'].includes(u.protocol)) fail();
+        } catch { fail(); }
+      }
     } else { if(typeof value!=='string')fail();value=value.trim(); if(value.length>(kind==='long'?20000:190))fail();if(kind==='email'&&value&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))fail(); }
     output[key]=value;
   }

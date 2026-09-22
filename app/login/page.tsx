@@ -169,16 +169,14 @@ export default function LoginPage() {
                       setBusy(true);
                       setMessage('');
                       try {
-                        const res = await api<{ user: unknown; token?: string }>('/auth/login', {
+                        await api<{ user: unknown }>('/auth/login', {
                           method: 'POST',
                           body: JSON.stringify({
                             email: form.get('email'),
                             password: form.get('password'),
                           }),
                         });
-                        if (res?.token && typeof window !== 'undefined') {
-                          localStorage.setItem('crm_session', res.token);
-                        }
+                        // C-2 Security: No localStorage — session is handled by HttpOnly cookie only
                         router.replace('/');
                       } catch (error) {
                         setMessage(

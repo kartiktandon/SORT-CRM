@@ -46,7 +46,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   const handleError = useCallback(
     (error: unknown) => {
       if (error instanceof ApiError && error.status === 401) {
-        if (typeof window !== 'undefined') localStorage.removeItem('crm_session');
+        // C-2 Security: No localStorage to clear — session is cookie-only
         router.replace('/login');
       }
       setError(error instanceof Error ? error.message : 'Unable to connect.');
@@ -158,7 +158,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     }
   };
   const logout = async () => {
-    if (typeof window !== 'undefined') localStorage.removeItem('crm_session');
+    // C-2 Security: No localStorage to clear — session is cookie-only
     try {
       await api('/auth/logout', { method: 'POST' });
       setState(null);
