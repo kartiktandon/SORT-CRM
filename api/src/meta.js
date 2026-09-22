@@ -177,9 +177,6 @@ export async function handleWebhook(req, res) {
     return res.status(403).send('Invalid signature');
   }
 
-  // Always acknowledge immediately with 200 OK so Meta doesn't retry/time out
-  res.status(200).send('EVENT_RECEIVED');
-
   try {
     const body = req.body;
 
@@ -252,6 +249,9 @@ export async function handleWebhook(req, res) {
     }
   } catch (err) {
     console.error('[Meta Webhook] Unexpected error handling payload:', err);
+  } finally {
+    // Acknowledge Meta only AFTER all database insertions have finished
+    res.status(200).send('EVENT_RECEIVED');
   }
 }
 

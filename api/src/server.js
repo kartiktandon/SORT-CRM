@@ -131,7 +131,8 @@ const initExpensesTable = async () => {
     console.warn('Expenses table initialization note:', err.message);
   }
 };
-initExpensesTable();
+// initExpensesTable is available for setup / health check, not executed on every serverless cold start
+export { initExpensesTable };
 
 // C-4: Health endpoint — no internal infra details exposed
 app.get('/api/health', asyncRoute(async (_req, res) => {

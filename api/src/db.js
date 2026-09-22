@@ -57,7 +57,7 @@ export const connectionOptions = {
     ca,
     rejectUnauthorized: process.env.MYSQL_SSL_REJECT_UNAUTHORIZED === 'true',
   } : undefined,
-  connectTimeout: 10000,
+  connectTimeout: 15000,
 };
 
 export const db = mysql.createPool({
@@ -66,4 +66,6 @@ export const db = mysql.createPool({
   connectionLimit: 5,
   dateStrings: true,
   decimalNumbers: true,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000,
 });
