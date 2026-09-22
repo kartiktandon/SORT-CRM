@@ -63,7 +63,7 @@ export const connectionOptions = {
 export const db = mysql.createPool({
   ...connectionOptions,
   waitForConnections: true,
-  connectionLimit: 5,
+  connectionLimit: 12,
   dateStrings: true,
   decimalNumbers: true,
   enableKeepAlive: true,

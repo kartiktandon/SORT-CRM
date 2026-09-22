@@ -222,18 +222,24 @@ app.post('/api/webhooks/facebook/test', asyncRoute(async (req, res) => {
 // H-5: Meta integration status — now behind auth middleware (no unauthenticated access)
 app.get('/api/integrations/meta/status', getMetaStatus);
 
-// ── Bootstrap ────────────────────────────────────────────────
+// ── Bootstrap (Parallelized for sub-second performance) ───────
 const publicUsers = 'id,name,email,role,job_title,status,phone,created_at,updated_at';
 app.get('/api/bootstrap', asyncRoute(async (req, res) => {
+  const resourceKeys = Object.keys(resources);
+
+  // Execute all 9 resource queries and the documents query in parallel
+  const [resourceResults, [documents]] = await Promise.all([
+    Promise.all(resourceKeys.map(resource =>
+      db.query(`SELECT ${resource === 'users' ? publicUsers : '*'} FROM \`${resource}\` ORDER BY id ASC LIMIT 2000`)
+    )),
+    db.query('SELECT document_key,payload,version FROM workspace_documents'),
+  ]);
+
   const data = {};
-  for (const resource of Object.keys(resources)) {
-    // M-2: Use explicit column list for users; cap row limit for all resources
-    const [rows] = await db.query(
-      `SELECT ${resource === 'users' ? publicUsers : '*'} FROM \`${resource}\` ORDER BY id ASC LIMIT 2000`
-    );
-    data[resource] = rows;
+  for (let i = 0; i < resourceKeys.length; i++) {
+    data[resourceKeys[i]] = resourceResults[i][0];
   }
-  const [documents] = await db.query('SELECT document_key,payload,version FROM workspace_documents');
+
   data.documents = Object.fromEntries(
     documents.map(row => [row.document_key, {
       value: typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload,
