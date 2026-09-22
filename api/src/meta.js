@@ -28,15 +28,24 @@ export function verifyWebhook(req, res) {
  * Fetch lead details from Meta Graph API
  */
 export async function fetchMetaLeadDetails(leadgenId) {
-  const token = (process.env.META_PAGE_ACCESS_TOKEN || META_PAGE_ACCESS_TOKEN || '').trim();
-  if (!token) {
+  const rawToken = process.env.META_PAGE_ACCESS_TOKEN || META_PAGE_ACCESS_TOKEN || '';
+  const cleanToken = rawToken.replace(/^["']|["']$/g, '').trim();
+  if (!cleanToken) {
     throw new Error('META_PAGE_ACCESS_TOKEN is not configured in environment variables');
   }
 
-  const url = `https://graph.facebook.com/v21.0/${leadgenId}`;
+  const cleanId = String(leadgenId).trim();
+  // Meta Graph API standard: pass access_token as query param with requested fields
+  const url = `https://graph.facebook.com/v21.0/${encodeURIComponent(cleanId)}?fields=id,created_time,field_data&access_token=${encodeURIComponent(cleanToken)}`;
+  
   const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      Accept: 'application/json',
+      'User-Agent': 'NoveraCRM/1.0',
+    },
+    signal: AbortSignal.timeout(15000),
   });
+
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`Meta Graph API error (${response.status}): ${errorText}`);
@@ -205,11 +214,13 @@ export async function handleWebhook(req, res) {
               try {
                 rawLead = await fetchMetaLeadDetails(leadgen_id);
               } catch (fetchErr) {
-                console.error(`[Meta Webhook] Could not fetch contact details for lead ${leadgen_id}:`, fetchErr.message);
+                const causeInfo = fetchErr.cause ? ` (${fetchErr.cause.code || fetchErr.cause.message || fetchErr.cause})` : '';
+                const fullErr = `${fetchErr.message}${causeInfo}`;
+                console.error(`[Meta Webhook] Could not fetch contact details for lead ${leadgen_id}:`, fullErr);
                 rawLead = {
                   field_data: [
                     { name: 'full_name', values: [`Facebook Lead #${leadgen_id}`] },
-                    { name: 'notes', values: [`Contact details retrieval note: ${fetchErr.message}`] },
+                    { name: 'notes', values: [`Contact details retrieval note: ${fullErr}`] },
                   ],
                 };
               }
