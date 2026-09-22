@@ -39,14 +39,25 @@ export function useRecords(resource: string) {
   return (data[resource] || []) as RecordData[];
 }
 export function CrmProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<{ data: Data; user: User } | null>(null);
+  const [state, setState] = useState<{ data: Data; user: User } | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem('novera_crm_cache');
+        if (cached) return JSON.parse(cached);
+      } catch {}
+    }
+    return null;
+  });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const router = useRouter();
   const handleError = useCallback(
     (error: unknown) => {
       if (error instanceof ApiError && error.status === 401) {
-        if (typeof window !== 'undefined') localStorage.removeItem('crm_session');
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('crm_session');
+          sessionStorage.removeItem('novera_crm_cache');
+        }
         router.replace('/login');
       }
       setError(error instanceof Error ? error.message : 'Unable to connect.');
@@ -57,6 +68,11 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     try {
       const result = await api<{ data: Data; user: User }>('/bootstrap');
       setState(result);
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem('novera_crm_cache', JSON.stringify(result));
+        } catch {}
+      }
       setError('');
     } catch (error) {
       handleError(error);
@@ -68,6 +84,11 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       .then((result) => {
         if (active) {
           setState(result);
+          if (typeof window !== 'undefined') {
+            try {
+              sessionStorage.setItem('novera_crm_cache', JSON.stringify(result));
+            } catch {}
+          }
           setError('');
         }
       })
@@ -158,7 +179,10 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     }
   };
   const logout = async () => {
-    if (typeof window !== 'undefined') localStorage.removeItem('crm_session');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('crm_session');
+      sessionStorage.removeItem('novera_crm_cache');
+    }
     try {
       await api('/auth/logout', { method: 'POST' });
       setState(null);
@@ -169,17 +193,67 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   };
   if (!state)
     return (
-      <div className="ws-empty" style={{ padding: 60 }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100vh',
+          background: '#0e1326',
+          color: '#ffffff',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          gap: 16,
+        }}
+      >
         {error ? (
-          <>
-            <p>{error}</p>
-            <button onClick={() => void refresh()}>
-              Retry connection
-            </button> ·{' '}
-            <Link href="/login">Sign in</Link>
-          </>
+          <div style={{ textAlign: 'center', maxWidth: 400, padding: 24, background: '#1c223a', borderRadius: 12 }}>
+            <p style={{ color: '#ff6b81', marginBottom: 16, fontSize: 15 }}>{error}</p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <button
+                onClick={() => void refresh()}
+                style={{
+                  background: '#6366f1',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  fontWeight: 500,
+                }}
+              >
+                Retry connection
+              </button>
+              <Link
+                href="/login"
+                style={{
+                  color: '#94a3b8',
+                  textDecoration: 'none',
+                  padding: '8px 16px',
+                  border: '1px solid #334155',
+                  borderRadius: 6,
+                }}
+              >
+                Sign in
+              </Link>
+            </div>
+          </div>
         ) : (
-          'Connecting to your workspace…'
+          <>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                border: '3px solid rgba(255, 255, 255, 0.12)',
+                borderTopColor: '#6366f1',
+                borderRadius: '50%',
+                animation: 'ws-spin 0.8s linear infinite',
+              }}
+            />
+            <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: -0.2 }}>NOVERA CRM</div>
+            <div style={{ fontSize: 13, color: '#94a3b8' }}>Connecting to your workspace…</div>
+            <style>{`@keyframes ws-spin { to { transform: rotate(360deg); } }`}</style>
+          </>
         )}
       </div>
     );
