@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import mysql from 'mysql2/promise';
 import { connectionOptions } from '../src/db.js';
-const name=process.env.MYSQL_DATABASE || 'short_crm';
+const name=process.env.MYSQL_DATABASE || 'novera_crm';
 if(!/^[a-zA-Z0-9_-]{1,64}$/.test(name))throw Error('MYSQL_DATABASE must contain 1–64 letters, digits, underscores, or hyphens.');
 const connection=await mysql.createConnection({...connectionOptions,database:undefined});
 try {

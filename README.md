@@ -48,7 +48,7 @@ Keep React and Vinext. `npm run build:vercel` enables Vinext static export,
 skips the Cloudflare runtime plugin, and writes the frontend to `dist/client`.
 The normal `npm run dev` and `npm run build` commands retain their existing setup.
 
-Import this repository as `sort-crm-frontend` with root directory `./`.
+Import this repository as `novera-crm-frontend` with root directory `./`.
 Use the Other preset; `vercel.json` sets build command `npm run build:vercel`,
 install command `npm ci`, output directory `dist/client`, and clean URLs.
 Remove conflicting dashboard overrides. Do not add MySQL credentials to the frontend.

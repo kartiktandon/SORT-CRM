@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const dynamic = 'force-static';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://short-marketing-crm.stable-cod-4752.chatgpt.site'),
+  metadataBase: new URL('https://crm.buildwithnovera.com'),
   title: 'Novera CRM — Agency command center',
   description: 'A focused CRM for teams to manage leads, clients, projects and revenue.',
   openGraph: {
