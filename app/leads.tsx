@@ -855,10 +855,6 @@ export default function LeadsExplorer() {
                 </header>
                 <dl className="lx-card-details">
                   <div>
-                    <dt>Lead ID</dt>
-                    <dd>#{lead.id}</dd>
-                  </div>
-                  <div>
                     <dt>Company / Brand</dt>
                     <dd>{lead.company || 'Not added'}</dd>
                   </div>
@@ -910,27 +906,8 @@ export default function LeadsExplorer() {
                     <dd>{lead.stage}</dd>
                   </div>
                   <div>
-                    <dt>Priority</dt>
-                    <dd>{lead.temperature || 'Normal'}</dd>
-                  </div>
-                  <div>
-                    <dt>Assigned Owner</dt>
-                    <dd>{lead.owner || 'Unassigned'}</dd>
-                  </div>
-                  <div>
                     <dt>Follow-up</dt>
                     <dd>{lead.followUp}</dd>
-                  </div>
-                  <div>
-                    <dt>Created</dt>
-                    <dd>
-                      <Clock3 size={12} />
-                      {lead.age}
-                    </dd>
-                  </div>
-                  <div className="lx-card-notes">
-                    <dt>Notes</dt>
-                    <dd>{lead.notes || 'No notes added'}</dd>
                   </div>
                 </dl>
                 <div className="lx-card-actions">

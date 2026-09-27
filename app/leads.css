@@ -452,14 +452,6 @@
   overflow-wrap:anywhere;
 }
 .lx-card-details dd svg{flex:0 0 auto;margin-top:2px;color:#6366f1}
-.lx-card-details .lx-card-notes{
-  grid-column:1/-1;
-  border-right:0;
-  border-top:1px solid rgba(226,232,240,.8);
-}
-.lx-card-details .lx-card-notes dd{
-  white-space:pre-wrap;
-}
 
 /* ── Footer Meta Tags ─────────────────────────────────────── */
 .lx-card footer{
