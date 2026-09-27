@@ -18,12 +18,12 @@ import {
   Menu,
   MoreHorizontal,
   Receipt,
-  Sparkles,
   Target,
   Users,
   X,
   Zap,
 } from 'lucide-react';
+import NoveraLogo from './novera-logo';
 
 const navigation = [
   { label: 'Overview', items: [['Dashboard', LayoutDashboard]] },
@@ -70,7 +70,7 @@ function Workspace() {
       <aside className={`sidebar ${mobileOpen ? 'sidebar-open' : ''}`}>
         <div className="brand">
           <span className="brand-mark">
-            <Sparkles size={19} />
+            <NoveraLogo />
           </span>
           <span className="brand-copy">
             <strong>NOVERA CRM</strong>

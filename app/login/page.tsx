@@ -19,7 +19,6 @@ import {
   EyeOff,
   LockKeyhole,
   Mail,
-  Sparkles,
   ArrowUpRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,6 +26,7 @@ import { Input } from '@/components/ui/input';
 import './login.css';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import NoveraLogo from '../novera-logo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -51,7 +51,7 @@ export default function LoginPage() {
       <header className="login-header">
         <Link className="login-brand" href="/" aria-label="NOVERA CRM home">
           <span>
-            <Sparkles size={20} />
+            <NoveraLogo />
           </span>
           <div>
             NOVERA CRM<small>A little order. A lot of possibility.</small>

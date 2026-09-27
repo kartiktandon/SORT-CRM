@@ -10,6 +10,7 @@ import {
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api, ApiError } from '@/lib/api';
+import NoveraLogo from './novera-logo';
 export type RecordData = { id: number; [key: string]: string | number | null };
 export type User = { id: number; name: string; email: string; role: string };
 type DocumentData = { value: unknown; version: number };
@@ -39,15 +40,7 @@ export function useRecords(resource: string) {
   return (data[resource] || []) as RecordData[];
 }
 export function CrmProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<{ data: Data; user: User } | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = sessionStorage.getItem('novera_crm_cache');
-        if (cached) return JSON.parse(cached);
-      } catch {}
-    }
-    return null;
-  });
+  const [state, setState] = useState<{ data: Data; user: User } | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const router = useRouter();
@@ -80,6 +73,13 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   }, [handleError]);
   useEffect(() => {
     let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      try {
+        const cached = sessionStorage.getItem('novera_crm_cache');
+        if (cached) setState(JSON.parse(cached));
+      } catch {}
+    });
     api<{ data: Data; user: User }>('/bootstrap')
       .then((result) => {
         if (active) {
@@ -239,21 +239,21 @@ export function CrmProvider({ children }: { children: ReactNode }) {
             </div>
           </div>
         ) : (
-          <>
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                border: '3px solid rgba(255, 255, 255, 0.12)',
-                borderTopColor: '#6366f1',
-                borderRadius: '50%',
-                animation: 'ws-spin 0.8s linear infinite',
-              }}
-            />
-            <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: -0.2 }}>NOVERA CRM</div>
-            <div style={{ fontSize: 13, color: '#94a3b8' }}>Connecting to your workspace…</div>
-            <style>{`@keyframes ws-spin { to { transform: rotate(360deg); } }`}</style>
-          </>
+          <output className="crm-initial-loader" aria-live="polite">
+            <span className="crm-initial-loader-mark" aria-hidden="true">
+              <span className="crm-initial-loader-glow" />
+              <NoveraLogo />
+            </span>
+            <strong>NOVERA CRM</strong>
+            <span className="crm-initial-loader-status">
+              Connecting to your workspace
+              <span className="crm-initial-loader-dots" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
+            </span>
+          </output>
         )}
       </div>
     );

@@ -64,6 +64,127 @@ button {
   cursor: pointer;
 }
 
+/* ── Initial CRM Loader ───────────────────────────────────── */
+.crm-initial-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  color: #ffffff;
+  text-align: center;
+}
+
+.crm-initial-loader-mark {
+  position: relative;
+  display: grid;
+  width: 92px;
+  height: 92px;
+  margin-bottom: 22px;
+  place-items: center;
+  isolation: isolate;
+}
+
+.crm-initial-loader-mark svg {
+  z-index: 1;
+  width: 58px;
+  height: 53px;
+  color: #ffffff;
+  filter: drop-shadow(0 0 12px rgba(165, 180, 252, 0.28));
+  animation: novera-loader-breathe 1.8s ease-in-out infinite;
+}
+
+.crm-initial-loader-mark svg path {
+  opacity: 0;
+  transform: translateY(7px);
+  transform-origin: center;
+  animation: novera-loader-piece 1.8s ease-in-out infinite;
+}
+
+.crm-initial-loader-mark svg path:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.crm-initial-loader-mark svg path:nth-child(3) {
+  animation-delay: 0.24s;
+}
+
+.crm-initial-loader-glow {
+  position: absolute;
+  inset: 4px;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.36), rgba(99, 102, 241, 0) 68%);
+  animation: novera-loader-glow 1.8s ease-in-out infinite;
+}
+
+.crm-initial-loader strong {
+  font-size: 16px;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+}
+
+.crm-initial-loader-status {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 9px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.crm-initial-loader-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  width: 22px;
+  margin-left: 5px;
+}
+
+.crm-initial-loader-dots i {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #a5b4fc;
+  animation: novera-loader-dot 1.2s ease-in-out infinite;
+}
+
+.crm-initial-loader-dots i:nth-child(2) { animation-delay: 0.16s; }
+.crm-initial-loader-dots i:nth-child(3) { animation-delay: 0.32s; }
+
+@keyframes novera-loader-piece {
+  0%, 14% { opacity: 0; transform: translateY(7px); }
+  32%, 76% { opacity: 1; transform: translateY(0); }
+  94%, 100% { opacity: 0; transform: translateY(-3px); }
+}
+
+@keyframes novera-loader-breathe {
+  0%, 100% { transform: scale(0.96); }
+  52% { transform: scale(1.04); }
+}
+
+@keyframes novera-loader-glow {
+  0%, 100% { opacity: 0.35; transform: scale(0.82); }
+  52% { opacity: 1; transform: scale(1.15); }
+}
+
+@keyframes novera-loader-dot {
+  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crm-initial-loader-mark svg,
+  .crm-initial-loader-mark svg path,
+  .crm-initial-loader-glow,
+  .crm-initial-loader-dots i {
+    animation: none;
+  }
+
+  .crm-initial-loader-mark svg path {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* ── CRM App Shell ───────────────────────────────────────── */
 .crm-shell {
   min-height: 100vh;
@@ -99,18 +220,20 @@ button {
 .brand-mark {
   display: grid;
   place-items: center;
-  width: 36px;
+  width: 40px;
   height: 36px;
   color: #ffffff;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
-  border-radius: 10px;
-  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.45);
   flex-shrink: 0;
   transition: transform 0.2s ease;
 }
 
+.brand-mark svg {
+  width: 34px;
+  height: 31px;
+}
+
 .brand:hover .brand-mark {
-  transform: scale(1.05) rotate(2deg);
+  transform: scale(1.05);
 }
 
 .brand-copy {

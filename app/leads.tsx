@@ -779,13 +779,13 @@ export default function LeadsExplorer() {
                         {lead.platform}
                       </span>
                       {lead.temperature === 'Hot' && (
-                        <span className="lx-tag-priority priority-hot">🔥 Hot</span>
+                        <span className="lx-tag-priority priority-hot">Hot</span>
                       )}
                       {lead.temperature === 'Warm' && (
-                        <span className="lx-tag-priority priority-warm">⚡ Warm</span>
+                        <span className="lx-tag-priority priority-warm">Warm</span>
                       )}
                       {lead.temperature === 'Cold' && (
-                        <span className="lx-tag-priority priority-cold">❄️ Cold</span>
+                        <span className="lx-tag-priority priority-cold">Cold</span>
                       )}
                       {lead.followUp === 'Overdue' && (
                         <span className="lx-tag-overdue">Overdue</span>
@@ -801,68 +801,86 @@ export default function LeadsExplorer() {
                     />
                   </div>
                 </header>
-                <div className="lx-contact-info">
-                  <span>
-                    <Phone size={12} />
-                    {lead.phone || 'Phone not added'}
-                  </span>
-                  <span>
-                    <Mail size={12} />
-                    {lead.email || 'Email not added'}
-                  </span>
-                  <span>
-                    <MapPin size={12} />
-                    {lead.city || 'City not added'}
-                  </span>
-                </div>
-                <div className="lx-attributes">
-                  {lead.budget && (
-                    <span className="lx-attr-budget">{lead.budget}</span>
-                  )}
-                  {lead.service ? (
-                    <span>
-                      <Briefcase size={10} />
-                      {lead.service}
-                    </span>
-                  ) : lead.company ? (
-                    <span>
-                      <Briefcase size={10} />
-                      {lead.company}
-                    </span>
-                  ) : null}
-                  {lead.timeline && (
-                    <span>
-                      <CalendarClock size={10} />
-                      {lead.timeline}
-                    </span>
-                  )}
-                </div>
-                <p className="lx-campaign">
-                  {lead.company} · {lead.source}
-                </p>
-                <footer>
-                  <span>
-                    <Clock3 size={10} />
-                    {lead.age}
-                  </span>
-                  <span className={!lead.owner ? 'unassigned' : ''}>
-                    {lead.owner || 'Unassigned'}
-                  </span>
-                  {lead.followUp !== 'No follow-up' && (
-                    <span
-                      className={
-                        lead.followUp === 'Overdue'
-                          ? 'overdue'
-                          : lead.followUp === 'Due Today'
-                            ? 'due-today'
-                            : ''
-                      }
-                    >
-                      <CalendarClock size={10} />
-                      {lead.followUp}
-                    </span>
-                  )}
-                </footer>
+                <dl className="lx-card-details">
+                  <div>
+                    <dt>Lead ID</dt>
+                    <dd>#{lead.id}</dd>
+                  </div>
+                  <div>
+                    <dt>Company / Brand</dt>
+                    <dd>{lead.company || 'Not added'}</dd>
+                  </div>
+                  <div>
+                    <dt>Phone</dt>
+                    <dd>
+                      <Phone size={12} />
+                      {lead.phone || 'Not added'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Email</dt>
+                    <dd>
+                      <Mail size={12} />
+                      {lead.email || 'Not added'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>City / Location</dt>
+                    <dd>
+                      <MapPin size={12} />
+                      {lead.city || 'Not added'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Budget</dt>
+                    <dd>{lead.budget || 'Not added'}</dd>
+                  </div>
+                  <div>
+                    <dt>Interested Service</dt>
+                    <dd>
+                      <Briefcase size={12} />
+                      {lead.service || 'Not added'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Project Timeline</dt>
+                    <dd>
+                      <CalendarClock size={12} />
+                      {lead.timeline || 'Not added'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Source</dt>
+                    <dd>{lead.platform}</dd>
+                  </div>
+                  <div>
+                    <dt>Stage</dt>
+                    <dd>{lead.stage}</dd>
+                  </div>
+                  <div>
+                    <dt>Priority</dt>
+                    <dd>{lead.temperature || 'Normal'}</dd>
+                  </div>
+                  <div>
+                    <dt>Assigned Owner</dt>
+                    <dd>{lead.owner || 'Unassigned'}</dd>
+                  </div>
+                  <div>
+                    <dt>Follow-up</dt>
+                    <dd>{lead.followUp}</dd>
+                  </div>
+                  <div>
+                    <dt>Created</dt>
+                    <dd>
+                      <Clock3 size={12} />
+                      {lead.age}
+                    </dd>
+                  </div>
+                  <div className="lx-card-notes">
+                    <dt>Notes</dt>
+                    <dd>{lead.notes || 'No notes added'}</dd>
+                  </div>
+                </dl>
                 <div className="lx-card-actions">
                   {lead.phone ? (
                     <a href={`tel:${lead.phone.replace(/[^+\d]/g, '')}`}>
