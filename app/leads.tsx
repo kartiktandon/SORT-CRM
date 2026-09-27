@@ -68,6 +68,14 @@ type Lead = SeedLead & {
   followUp: string;
   notes: string;
 };
+type LeadNote = {
+  id: number;
+  leadId: number;
+  userName: string;
+  note: string;
+  createdAt: string;
+  updatedAt: string;
+};
 const legacyBudgetFromNotes = (notes: string) => {
   const match = notes.match(
     /(?:^|[|·])\s*what_is_your_estimated_project_budget\??:\s*([^|·]+)/i,
@@ -75,6 +83,18 @@ const legacyBudgetFromNotes = (notes: string) => {
   if (!match) return '';
   const value = match[1].replaceAll('_', ' ').trim();
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
+};
+const noteDateTime = (value: string) => {
+  if (!value) return 'Time unavailable';
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return 'Time unavailable';
+  return date.toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 const stageNames = [
   'New',
@@ -149,7 +169,16 @@ function exportLeads(leads: Lead[]) {
 export default function LeadsExplorer() {
   const { user, save, remove, busy } = useCrm();
   const records = useRecords('leads');
+  const noteRecords = useRecords('lead_notes');
   const owners = useRecords('users').map((row) => text(row, 'name'));
+  const leadNotes: LeadNote[] = noteRecords.map((row) => ({
+    id: row.id,
+    leadId: Number(row.lead_id),
+    userName: text(row, 'user_name') || 'Unknown user',
+    note: text(row, 'note'),
+    createdAt: text(row, 'created_at'),
+    updatedAt: text(row, 'updated_at'),
+  }));
   const leads: Lead[] = records.map((row) => ({
     id: row.id,
     name: text(row, 'name'),
@@ -169,8 +198,8 @@ export default function LeadsExplorer() {
     followUp: text(row, 'follow_up') || 'No follow-up',
     notes: text(row, 'notes'),
   }));
-  const saveLead = async (lead: Lead) => {
-    await save('leads', {
+  const saveLead = async (lead: Lead, newNote: string) => {
+    const savedLead = await save('leads', {
       ...(lead.id ? { id: lead.id } : {}),
       name: lead.name,
       company: lead.company,
@@ -186,8 +215,11 @@ export default function LeadsExplorer() {
       timeline: lead.timeline,
       owner: lead.owner,
       follow_up: lead.followUp,
-      notes: lead.notes,
+      ...(lead.id ? {} : { notes: '' }),
     });
+    if (newNote.trim()) {
+      await save('lead_notes', { lead_id: savedLead.id, note: newNote.trim() });
+    }
   };
   const [query, setQuery] = useState('');
   const [platform, setPlatform] = useState('All Platforms');
@@ -204,6 +236,7 @@ export default function LeadsExplorer() {
   const [selected, setSelected] = useState<number[]>([]);
   const [draft, setDraft] = useState<Lead | null>(null);
   const [detailTab, setDetailTab] = useState('Overview');
+  const [newNote, setNewNote] = useState('');
   const [notice, setNotice] = useState('');
   const [bulkStage, setBulkStage] = useState('New');
   const [scope, setScope] = useState('All Leads');
@@ -275,6 +308,7 @@ export default function LeadsExplorer() {
   };
   const openLead = (lead: Lead, tab = 'Overview') => {
     setDraft({ ...lead });
+    setNewNote('');
     setDetailTab(tab);
   };
   const count = (predicate: (lead: Lead) => boolean) =>
@@ -376,6 +410,7 @@ export default function LeadsExplorer() {
             className="ws-button"
             onClick={() => {
               setDraft({ ...emptyLead });
+              setNewNote('');
               setDetailTab('Overview');
             }}
           >
@@ -1168,7 +1203,7 @@ export default function LeadsExplorer() {
                   event.preventDefault();
                   if (busy) return;
                   try {
-                    await saveLead(draft);
+                    await saveLead(draft, newNote);
                     setNotice(
                       draft.id
                         ? `${draft.name} updated.`
@@ -1452,23 +1487,66 @@ export default function LeadsExplorer() {
                 )}
 
                 {detailTab === 'Notes' && (
-                  <div className="lx-field-group">
-                    <label htmlFor="lead-notes" className="lx-field-label">
-                      Activity Notes & Conversation Logs
-                    </label>
-                    <textarea
-                      id="lead-notes"
-                      className="lx-notes-textarea"
-                      placeholder="Add requirements, meeting minutes, client feedback, or proposal discussions here..."
-                      rows={6}
-                      value={draft.notes}
-                      onChange={(e) =>
-                        setDraft({ ...draft, notes: e.target.value })
-                      }
-                    />
-                    <small style={{ color: '#94a3b8', fontSize: '10px', marginTop: '4px' }}>
-                      Notes are saved automatically when updating the lead.
-                    </small>
+                  <div className="lx-notes-panel">
+                    <div className="lx-field-group">
+                      <label htmlFor="lead-notes" className="lx-field-label">
+                        Add Activity Note
+                      </label>
+                      <textarea
+                        id="lead-notes"
+                        className="lx-notes-textarea"
+                        placeholder="Add requirements, meeting minutes, client feedback, or proposal discussions here..."
+                        rows={4}
+                        value={newNote}
+                        onChange={(e) => setNewNote(e.target.value)}
+                      />
+                      <small className="lx-notes-help">
+                        This note will be saved with your name and the current time.
+                      </small>
+                    </div>
+                    <div className="lx-note-history">
+                      <div className="lx-note-history-heading">
+                        <strong>Note history</strong>
+                        <span>
+                          {draft.id
+                            ? leadNotes.filter((note) => note.leadId === draft.id).length
+                            : 0}{' '}
+                          notes
+                        </span>
+                      </div>
+                      {draft.id &&
+                      leadNotes.some((note) => note.leadId === draft.id) ? (
+                        leadNotes
+                          .filter((note) => note.leadId === draft.id)
+                          .sort(
+                            (a, b) =>
+                              new Date(b.updatedAt).getTime() -
+                              new Date(a.updatedAt).getTime(),
+                          )
+                          .map((note) => (
+                            <article className="lx-note-entry" key={note.id}>
+                              <div className="lx-note-avatar" aria-hidden="true">
+                                {note.userName.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <header>
+                                  <strong>{note.userName}</strong>
+                                  <time dateTime={note.updatedAt}>
+                                    {noteDateTime(note.updatedAt)}
+                                  </time>
+                                </header>
+                                <p>{note.note}</p>
+                              </div>
+                            </article>
+                          ))
+                      ) : (
+                        <p className="lx-note-empty">
+                          {draft.id
+                            ? 'No notes have been added yet.'
+                            : 'Save the lead to start its note history.'}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
 

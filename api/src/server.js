@@ -284,7 +284,8 @@ for (const resource of Object.keys(resources)) {
     const column = resource === 'tasks' || resource === 'expenses' ? 'title'
       : resource === 'invoices' ? 'invoice_number'
         : resource === 'agreements' ? 'title'
-          : resource === 'reports' ? 'weekly_reports' : 'name';
+          : resource === 'reports' ? 'weekly_reports'
+            : resource === 'lead_notes' ? 'note' : 'name';
     const [rows] = await db.execute(
       `SELECT ${resource === 'users' ? publicUsers : '*'} FROM \`${resource}\` WHERE \`${column}\` LIKE ? ORDER BY id DESC LIMIT 2000`,
       [`%${term}%`]
@@ -296,6 +297,10 @@ for (const resource of Object.keys(resources)) {
     if (resource === 'users' && req.user.role !== 'admin')
       return res.status(403).json({ error: 'Administrator access required.' });
     const data = validate(resource, req.body, true);
+    if (resource === 'lead_notes') {
+      data.user_id = req.user.id;
+      data.user_name = req.user.name;
+    }
     const [result] = await db.query(`INSERT INTO \`${resource}\` SET ?`, data);
     const [rows] = await db.execute(
       `SELECT ${resource === 'users' ? publicUsers : '*'} FROM \`${resource}\` WHERE id=?`,
@@ -308,6 +313,8 @@ for (const resource of Object.keys(resources)) {
     if (!/^[1-9]\d*$/.test(req.params.id)) return res.status(400).json({ error: 'Invalid record ID.' });
     if (resource === 'users' && req.user.role !== 'admin')
       return res.status(403).json({ error: 'Administrator access required.' });
+    if (resource === 'lead_notes')
+      return res.status(405).json({ error: 'Notes cannot be edited after they are added.' });
     const data = validate(resource, req.body);
     const [result] = await db.query(`UPDATE \`${resource}\` SET ? WHERE id=?`, [data, req.params.id]);
     if (!result.affectedRows) return res.status(404).json({ error: 'Record not found.' });
@@ -319,6 +326,8 @@ for (const resource of Object.keys(resources)) {
   }));
 
   app.delete(`/api/${resource}/:id`, asyncRoute(async (req, res) => {
+    if (resource === 'lead_notes')
+      return res.status(405).json({ error: 'Notes cannot be deleted.' });
     if (resource !== 'leads' && resource !== 'expenses' && req.user.role !== 'admin')
       return res.status(403).json({ error: 'Administrator access required.' });
     if (!/^[1-9]\d*$/.test(req.params.id)) return res.status(400).json({ error: 'Invalid record ID.' });

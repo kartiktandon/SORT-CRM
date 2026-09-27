@@ -1,5 +1,6 @@
 export const resources = {
   leads: { required: ['name'], fields: {name:'text',company:'text',email:'email',phone:'text',source:'text',status:['New leads','Contacted','Interested','Proposal','Closed','Lost','Ringing'],estimated_value:'money',notes:'long',platform:['Facebook','Instagram','Website'],city:'text',budget:'text',service:'text',timeline:'text',owner:'text',follow_up:['No follow-up','Due Today','Overdue','Upcoming (7d)'],temperature:'text'} },
+  lead_notes: {required:['lead_id','note'],fields:{lead_id:'id',note:'long'}},
   clients: {required:['name'],fields:{name:'text',industry:'text',email:'email',phone:'text',type:['Retainer','Project'],status:['Onboarding','Active','Inactive'],monthly_value:'money'}},
   projects:{required:['client_id','name'],fields:{client_id:'id',name:'text',description:'long',status:['Not started','In progress','On hold','Completed'],progress:'progress',start_date:'date',due_date:'date',monthly_value:'money'}},
   tasks:{required:['title'],fields:{project_id:'nullableId',assignee_id:'nullableId',title:'text',description:'long',status:['Not started','Pending','In progress','Completed'],priority:['low','medium','high'],due_date:'date',client_name:'text',assignee_name:'text'}},

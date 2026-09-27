@@ -161,6 +161,12 @@ export async function insertLeadIntoCrm({
   );
 
   const [rows] = await db.execute('SELECT * FROM leads WHERE id = ?', [result.insertId]);
+  if (notes.trim()) {
+    await db.execute(
+      'INSERT INTO lead_notes (lead_id, user_name, note) VALUES (?, ?, ?)',
+      [result.insertId, 'Meta Lead Ads', notes],
+    );
+  }
   return rows[0];
 }
 
