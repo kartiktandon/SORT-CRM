@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { randomBytes } from 'node:crypto';
-import { db, connectionOptions } from './db.js';
+import { db } from './db.js';
 import { hashPassword, verifyPassword, tokenHash, readSession } from './security.js';
 import { resources, validate } from './resources.js';
 import { verifyWebhook, handleWebhook, handleTestLead, getMetaStatus } from './meta.js';

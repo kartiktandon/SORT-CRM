@@ -3,13 +3,11 @@
 import { useId, useState, type ReactNode } from 'react';
 import {
   ArrowLeft,
-  Building2,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock3,
   Copy,
-  DollarSign,
   Download,
   ExternalLink,
   FileCheck2,
@@ -17,13 +15,9 @@ import {
   List,
   Plus,
   Printer,
-  Receipt,
   RotateCcw,
   Search,
   Sparkles,
-  TrendingDown,
-  TrendingUp,
-  Wallet,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1085,10 +1079,6 @@ function FinanceView({ initialTab = 'Overview' }: { initialTab?: string }) {
     (row) =>
       month === 'All months' || String(row.date || '').startsWith(month),
   );
-  const expenseRows = allExpenseRowsForMonth.filter(
-    (row) => categoryFilter === 'All' || row.category === categoryFilter,
-  );
-
   const totalInvoiced = invoiceRows.reduce(
     (sum, row) => sum + Number(row.amount || 0),
     0,

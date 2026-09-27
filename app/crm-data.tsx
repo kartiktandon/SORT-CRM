@@ -306,28 +306,10 @@ export function money(value: unknown) {
     maximumFractionDigits: 0,
   }).format(Number(value) || 0);
 }
-export function amount(value: string) {
-  const cleaned = value.replace(/[₹,\s]/g, '');
-  const parsed = Number(cleaned);
-  if (!Number.isFinite(parsed) || parsed < 0)
-    throw Error('Enter a valid amount, e.g. 50000.');
-  return parsed;
-}
 export function dateLabel(value: unknown) {
   if (typeof value !== 'string' || !value) return '—';
   return new Date(`${value.slice(0, 10)}T12:00:00`).toLocaleDateString(
     'en-GB',
     { day: '2-digit', month: 'short', year: 'numeric' },
   );
-}
-export function isoDate(value: string) {
-  if (!value || value === '—') return null;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-  const normalized = /\d{4}/.test(value)
-    ? value
-    : `${value} ${new Date().getFullYear()}`;
-  const date = new Date(normalized);
-  if (!Number.isFinite(date.getTime()))
-    throw Error('Enter a valid date, e.g. 2026-09-30.');
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
