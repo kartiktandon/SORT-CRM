@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://crm.buildwithnovera.com'),
   title: 'Novera CRM — Agency command center',
   description: 'A focused CRM for teams to manage leads, clients, projects and revenue.',
+  icons: {
+    icon: '/favicon.svg',
+  },
   openGraph: {
     title: 'Novera CRM — Agency command center',
     description: 'Leads. Clients. Projects. One clear workspace.',
