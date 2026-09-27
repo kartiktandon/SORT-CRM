@@ -68,6 +68,14 @@ type Lead = SeedLead & {
   followUp: string;
   notes: string;
 };
+const legacyBudgetFromNotes = (notes: string) => {
+  const match = notes.match(
+    /(?:^|[|·])\s*what_is_your_estimated_project_budget\??:\s*([^|·]+)/i,
+  );
+  if (!match) return '';
+  const value = match[1].replaceAll('_', ' ').trim();
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
+};
 const stageNames = [
   'New',
   'Contacted',
@@ -173,7 +181,7 @@ export default function LeadsExplorer() {
       phone: lead.phone,
       email: lead.email,
       city: lead.city,
-      budget: lead.budget,
+      budget: lead.budget || legacyBudgetFromNotes(lead.notes || ''),
       service: lead.service,
       timeline: lead.timeline,
       owner: lead.owner,

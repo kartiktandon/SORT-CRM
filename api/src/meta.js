@@ -64,6 +64,7 @@ export function parseMetaFieldData(fieldDataArray = []) {
     phone: '',
     company: '',
     city: '',
+    budget: '',
     notes: '',
   };
 
@@ -89,6 +90,11 @@ export function parseMetaFieldData(fieldDataArray = []) {
       lead.company = value;
     } else if (key.includes('city')) {
       lead.city = value;
+    } else if (key === 'budget' || key.includes('estimated_project_budget')) {
+      const readableBudget = String(value).replaceAll('_', ' ').trim();
+      lead.budget = readableBudget
+        ? readableBudget.charAt(0).toUpperCase() + readableBudget.slice(1)
+        : '';
     } else {
       extraNotes.push(`${item.name}: ${value}`);
     }
@@ -106,6 +112,21 @@ export function parseMetaFieldData(fieldDataArray = []) {
 }
 
 /**
+ * Recover a Meta budget answer that older webhook versions stored in notes.
+ */
+export function parseLegacyBudgetFromNotes(notes = '') {
+  const match = String(notes).match(
+    /(?:^|[|·])\s*what_is_your_estimated_project_budget\??:\s*([^|·]+)/i,
+  );
+  if (!match) return '';
+
+  const readableBudget = match[1].replaceAll('_', ' ').trim();
+  return readableBudget
+    ? readableBudget.charAt(0).toUpperCase() + readableBudget.slice(1)
+    : '';
+}
+
+/**
  * Insert a parsed lead directly into the CRM database
  */
 export async function insertLeadIntoCrm({
@@ -114,6 +135,7 @@ export async function insertLeadIntoCrm({
   phone = '',
   company = '',
   city = '',
+  budget = '',
   source = 'Facebook Ad',
   platform = 'Facebook',
   status = 'New leads',
@@ -121,14 +143,15 @@ export async function insertLeadIntoCrm({
   notes = '',
 }) {
   const [result] = await db.query(
-    `INSERT INTO leads (name, email, phone, company, city, source, platform, status, estimated_value, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO leads (name, email, phone, company, city, budget, source, platform, status, estimated_value, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       name.slice(0, 120),
       (email || '').slice(0, 190),
       (phone || '').slice(0, 40),
       (company || '').slice(0, 160),
       (city || '').slice(0, 100),
+      (budget || '').slice(0, 190),
       source.slice(0, 80),
       platform,
       status,
