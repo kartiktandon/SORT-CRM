@@ -65,6 +65,7 @@ export function parseMetaFieldData(fieldDataArray = []) {
     company: '',
     city: '',
     budget: '',
+    service: '',
     notes: '',
   };
 
@@ -95,6 +96,8 @@ export function parseMetaFieldData(fieldDataArray = []) {
       lead.budget = readableBudget
         ? readableBudget.charAt(0).toUpperCase() + readableBudget.slice(1)
         : '';
+    } else if (key === 'what_do_you_want_to_build' || key === 'what_do_you_want_to_build?') {
+      lead.service = formatMetaAnswer(value);
     } else {
       extraNotes.push(`${item.name}: ${value}`);
     }
@@ -109,6 +112,13 @@ export function parseMetaFieldData(fieldDataArray = []) {
   }
 
   return lead;
+}
+
+function formatMetaAnswer(value = '') {
+  const readableValue = String(value).replaceAll('_', ' ').trim();
+  return readableValue
+    ? readableValue.charAt(0).toUpperCase() + readableValue.slice(1)
+    : '';
 }
 
 /**
@@ -127,6 +137,16 @@ export function parseLegacyBudgetFromNotes(notes = '') {
 }
 
 /**
+ * Recover a Meta service answer that older webhook versions stored in notes.
+ */
+export function parseLegacyServiceFromNotes(notes = '') {
+  const match = String(notes).match(
+    /(?:^|[|·])\s*what_do_you_want_to_build\??:\s*([^|·]+)/i,
+  );
+  return match ? formatMetaAnswer(match[1]) : '';
+}
+
+/**
  * Insert a parsed lead directly into the CRM database
  */
 export async function insertLeadIntoCrm({
@@ -136,6 +156,7 @@ export async function insertLeadIntoCrm({
   company = '',
   city = '',
   budget = '',
+  service = '',
   source = 'Facebook Ad',
   platform = 'Facebook',
   status = 'New leads',
@@ -143,8 +164,8 @@ export async function insertLeadIntoCrm({
   notes = '',
 }) {
   const [result] = await db.query(
-    `INSERT INTO leads (name, email, phone, company, city, budget, source, platform, status, estimated_value, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO leads (name, email, phone, company, city, budget, service, source, platform, status, estimated_value, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       name.slice(0, 120),
       (email || '').slice(0, 190),
@@ -152,6 +173,7 @@ export async function insertLeadIntoCrm({
       (company || '').slice(0, 160),
       (city || '').slice(0, 100),
       (budget || '').slice(0, 190),
+      (service || '').slice(0, 190),
       source.slice(0, 80),
       platform,
       status,

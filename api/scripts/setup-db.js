@@ -29,6 +29,13 @@ try {
   )
   WHERE (budget IS NULL OR budget = '')
     AND notes LIKE '%what_is_your_estimated_project_budget?: %'`);
+ await connection.query(`UPDATE leads
+  SET service = CONCAT(
+    UPPER(LEFT(REPLACE(TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(notes, 'what_do_you_want_to_build?: ', -1), ' | ', 1)), '_', ' '), 1)),
+    SUBSTRING(REPLACE(TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(notes, 'what_do_you_want_to_build?: ', -1), ' | ', 1)), '_', ' '), 2)
+  )
+  WHERE (service IS NULL OR service = '')
+    AND notes LIKE '%what_do_you_want_to_build?: %'`);
  await connection.query(`INSERT INTO lead_notes (lead_id, user_name, note, created_at, updated_at)
   SELECT leads.id,
     CASE WHEN leads.notes LIKE 'Form ID:%' THEN 'Meta Lead Ads' ELSE 'Arvind Chugh' END,

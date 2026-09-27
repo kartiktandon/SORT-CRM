@@ -84,6 +84,14 @@ const legacyBudgetFromNotes = (notes: string) => {
   const value = match[1].replaceAll('_', ' ').trim();
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
 };
+const legacyServiceFromNotes = (notes: string) => {
+  const match = notes.match(
+    /(?:^|[|·])\s*what_do_you_want_to_build\??:\s*([^|·]+)/i,
+  );
+  if (!match) return '';
+  const service = match[1].replaceAll('_', ' ').trim();
+  return service ? service.charAt(0).toUpperCase() + service.slice(1) : '';
+};
 const noteDateTime = (value: string) => {
   if (!value) return 'Time unavailable';
   const date = new Date(value);
@@ -192,7 +200,8 @@ export default function LeadsExplorer() {
     email: text(row, 'email'),
     city: text(row, 'city'),
     budget: text(row, 'budget'),
-    service: text(row, 'service'),
+    service:
+      text(row, 'service') || legacyServiceFromNotes(text(row, 'notes')),
     timeline: text(row, 'timeline'),
     owner: text(row, 'owner'),
     followUp: text(row, 'follow_up') || 'No follow-up',
@@ -211,7 +220,7 @@ export default function LeadsExplorer() {
       email: lead.email,
       city: lead.city,
       budget: lead.budget || legacyBudgetFromNotes(lead.notes || ''),
-      service: lead.service,
+      service: lead.service || legacyServiceFromNotes(lead.notes || ''),
       timeline: lead.timeline,
       owner: lead.owner,
       follow_up: lead.followUp,
