@@ -477,6 +477,17 @@
   accent-color: var(--ws-purple);
   cursor: pointer;
 }
+.ws-content .ws-login-ready {
+  color: #166534;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+.ws-content .ws-login-missing {
+  color: #b45309;
+  font-size: 10.5px;
+  font-weight: 700;
+}
 
 /* ── Identity & Avatars in Tables ────────────────────────── */
 .ws-content .ws-identity {

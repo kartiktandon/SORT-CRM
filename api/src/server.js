@@ -223,7 +223,7 @@ app.post('/api/webhooks/facebook/test', asyncRoute(async (req, res) => {
 app.get('/api/integrations/meta/status', getMetaStatus);
 
 // ── Bootstrap (Parallelized for sub-second performance) ───────
-const publicUsers = 'id,name,email,role,job_title,status,phone,created_at,updated_at';
+const publicUsers = 'id,name,email,role,job_title,status,phone,IF(password_hash IS NULL,0,1) AS has_login,created_at,updated_at';
 app.get('/api/bootstrap', asyncRoute(async (req, res) => {
   const resourceKeys = Object.keys(resources);
 
@@ -297,6 +297,11 @@ for (const resource of Object.keys(resources)) {
     if (resource === 'users' && req.user.role !== 'admin')
       return res.status(403).json({ error: 'Administrator access required.' });
     const data = validate(resource, req.body, true);
+    if (resource === 'users') {
+      data.email = data.email.toLowerCase();
+      data.password_hash = await hashPassword(data.password);
+      delete data.password;
+    }
     if (resource === 'lead_notes') {
       data.user_id = req.user.id;
       data.user_name = req.user.name;
@@ -316,8 +321,17 @@ for (const resource of Object.keys(resources)) {
     if (resource === 'lead_notes')
       return res.status(405).json({ error: 'Notes cannot be edited after they are added.' });
     const data = validate(resource, req.body);
+    if (resource === 'users') {
+      if (data.email) data.email = data.email.toLowerCase();
+      if (data.password) {
+        data.password_hash = await hashPassword(data.password);
+        delete data.password;
+      }
+    }
     const [result] = await db.query(`UPDATE \`${resource}\` SET ? WHERE id=?`, [data, req.params.id]);
     if (!result.affectedRows) return res.status(404).json({ error: 'Record not found.' });
+    if (resource === 'users' && data.password_hash)
+      await db.execute('DELETE FROM sessions WHERE user_id=?', [req.params.id]);
     const [rows] = await db.execute(
       `SELECT ${resource === 'users' ? publicUsers : '*'} FROM \`${resource}\` WHERE id=?`,
       [req.params.id]

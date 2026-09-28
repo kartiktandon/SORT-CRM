@@ -35,7 +35,9 @@ Screens read authenticated bootstrap data; record editors save to the API.
 Dashboard statistics use actual records. Paid-invoice charts group by invoice issue
 month, not payment date. Project files store external links, not uploaded file bytes.
 Expenses, notification delivery, call logs, and time tracking are not implemented.
-Team profiles alone do not create sign-in credentials.
+Administrators create separate team-member sign-in credentials from the Team screen.
+Passwords are hashed and never displayed after saving; editing a member allows an
+administrator to set a new password.
 
 For an opt-in integration check with both servers running, run
 `node scripts/check-integration.js` from `api/`. It creates uniquely named fixtures

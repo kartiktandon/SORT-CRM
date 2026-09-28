@@ -6,6 +6,7 @@ CREATE TABLE users (
   name VARCHAR(120) NOT NULL, email VARCHAR(190) NOT NULL UNIQUE,
   role ENUM('admin','manager','member') NOT NULL DEFAULT 'member',
   job_title VARCHAR(120), status ENUM('active','away','inactive') DEFAULT 'active',
+  phone VARCHAR(190), password_hash VARCHAR(200),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 CREATE TABLE leads (

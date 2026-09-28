@@ -313,7 +313,7 @@ function RecordForm({
 type Field = {
   key: string;
   label: string;
-  kind?: 'number' | 'date' | 'email' | 'url' | 'textarea';
+  kind?: 'number' | 'date' | 'email' | 'password' | 'url' | 'textarea';
   options?: string[];
   resource?: string;
   required?: boolean;
@@ -404,6 +404,7 @@ const definitions: Record<
     fields: [
       field('name', 'Name', { required: true }),
       field('email', 'Email', { kind: 'email', required: true }),
+      field('password', 'Password', { kind: 'password', required: true }),
       field('job_title', 'Job Title'),
       field('phone', 'Phone'),
       statusField(['active', 'away', 'inactive']),
@@ -490,7 +491,11 @@ function RecordEditor({
           {record.id ? 'Edit' : 'Add'} {definition.singular}
         </DialogTitle>
         <DialogDescription>
-          Changes are saved to your workspace database.
+          {resource === 'users'
+            ? record.id
+              ? 'Update this member’s details. Leave password blank to keep the current password.'
+              : 'Create separate login credentials for this team member. Passwords must be at least 12 characters.'
+            : 'Changes are saved to your workspace database.'}
         </DialogDescription>
         <form
           onSubmit={async (event) => {
@@ -503,6 +508,7 @@ function RecordEditor({
                 : {};
               for (const f of definition.fields) {
                 const value = values[f.key];
+                if (f.kind === 'password' && record.id && !value) continue;
                 payload[f.key] = f.resource
                   ? value
                     ? Number(value)
@@ -569,7 +575,14 @@ function RecordEditor({
                         : '0.01'
                       : undefined
                   }
-                  required={f.required}
+                  required={f.required && !(f.kind === 'password' && record.id)}
+                  minLength={f.kind === 'password' ? 12 : undefined}
+                  autoComplete={f.kind === 'password' ? 'new-password' : undefined}
+                  placeholder={
+                    f.kind === 'password' && record.id
+                      ? 'Leave blank to keep current password'
+                      : undefined
+                  }
                   value={values[f.key]}
                   onChange={(e) =>
                     setValues({ ...values, [f.key]: e.target.value })
@@ -649,6 +662,14 @@ function ResourceView({
     (f) => f.kind !== 'textarea' && f.key !== 'document_url',
   );
   const display = (row: RecordData, f: Field): ReactNode => {
+    if (f.kind === 'password')
+      return row.has_login ? (
+        <span className="ws-login-ready" title="A password is configured">
+          ••••••••
+        </span>
+      ) : (
+        <span className="ws-login-missing">Not set</span>
+      );
     if (f.resource) {
       const related = ((data[f.resource] || []) as RecordData[]).find(
         (item) => item.id === Number(row[f.key]),
@@ -730,7 +751,8 @@ function ResourceView({
       />
       {resource === 'users' && (
         <p className="ws-hint">
-          Team profiles do not automatically receive sign-in credentials.
+          Each active member can sign in with their email and password. Passwords are
+          securely hashed and cannot be viewed later; use Edit to set a new one.
         </p>
       )}
       {draft && (

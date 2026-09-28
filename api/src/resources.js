@@ -5,7 +5,7 @@ export const resources = {
   projects:{required:['client_id','name'],fields:{client_id:'id',name:'text',description:'long',status:['Not started','In progress','On hold','Completed'],progress:'progress',start_date:'date',due_date:'date',monthly_value:'money'}},
   tasks:{required:['title'],fields:{project_id:'nullableId',assignee_id:'nullableId',title:'text',description:'long',status:['Not started','Pending','In progress','Completed'],priority:['low','medium','high'],due_date:'date',client_name:'text',assignee_name:'text'}},
   invoices:{required:['client_id','invoice_number','amount'],fields:{client_id:'id',invoice_number:'text',amount:'money',status:['Draft','Pending','Paid','Overdue'],issue_date:'date',due_date:'date'}},
-  users:{required:['name','email'],fields:{name:'text',email:'email',job_title:'text',status:['active','away','inactive'],phone:'text'}},
+  users:{required:['name','email','password'],fields:{name:'text',email:'email',password:'password',job_title:'text',status:['active','away','inactive'],phone:'text'}},
   // M-5: document_url uses 'url' kind to reject javascript:/data: URIs
   agreements:{required:['client_id','title'],fields:{client_id:'id',title:'text',type:'text',status:['Draft','Sent','Active','Expired'],start_date:'date',end_date:'date',document_url:'url'}},
   reports:{required:['client_id'],fields:{client_id:'id',weekly_reports:'text',monthly_status:['Pending','Submitted'],health:['On Track','Delayed'],submitted_at:'date'}},
@@ -37,6 +37,8 @@ export function validate(resource, body, create = false) {
           if (!['http:', 'https:'].includes(u.protocol)) fail();
         } catch { fail(); }
       }
+    } else if (kind==='password') {
+      if(typeof value!=='string'||value.length<12||value.length>1024)fail();
     } else { if(typeof value!=='string')fail();value=value.trim(); if(value.length>(kind==='long'?20000:190))fail();if(kind==='email'&&value&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))fail(); }
     output[key]=value;
   }
