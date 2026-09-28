@@ -9,6 +9,8 @@ import {
   Clock3,
   Copy,
   Download,
+  Eye,
+  EyeOff,
   ExternalLink,
   FileCheck2,
   LayoutGrid,
@@ -476,6 +478,8 @@ function RecordEditor({
     ),
   );
   const [error, setError] = useState('');
+  const [passwordConfirmation, setPasswordConfirmation] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
   return (
     <Dialog
       open
@@ -502,6 +506,13 @@ function RecordEditor({
             event.preventDefault();
             if (busy) return;
             setError('');
+            if (
+              resource === 'users' &&
+              values.password !== passwordConfirmation
+            ) {
+              setError('Password and confirm password must match.');
+              return;
+            }
             try {
               const payload: Partial<RecordData> = record.id
                 ? { id: record.id }
@@ -563,6 +574,31 @@ function RecordEditor({
                     setValues({ ...values, [f.key]: e.target.value })
                   }
                 />
+              ) : f.kind === 'password' ? (
+                <div className="ws-password-field">
+                  <Input
+                    type={passwordVisible ? 'text' : 'password'}
+                    required={!record.id}
+                    minLength={12}
+                    autoComplete="new-password"
+                    placeholder={
+                      record.id ? 'Leave blank to keep current password' : undefined
+                    }
+                    value={values[f.key]}
+                    onChange={(e) =>
+                      setValues({ ...values, [f.key]: e.target.value })
+                    }
+                  />
+                  <button
+                    type="button"
+                    className="ws-password-toggle"
+                    onClick={() => setPasswordVisible((visible) => !visible)}
+                    aria-label={passwordVisible ? 'Hide passwords' : 'Show passwords'}
+                    aria-pressed={passwordVisible}
+                  >
+                    {passwordVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               ) : (
                 <Input
                   type={f.kind || 'text'}
@@ -575,14 +611,7 @@ function RecordEditor({
                         : '0.01'
                       : undefined
                   }
-                  required={f.required && !(f.kind === 'password' && record.id)}
-                  minLength={f.kind === 'password' ? 12 : undefined}
-                  autoComplete={f.kind === 'password' ? 'new-password' : undefined}
-                  placeholder={
-                    f.kind === 'password' && record.id
-                      ? 'Leave blank to keep current password'
-                      : undefined
-                  }
+                  required={f.required}
                   value={values[f.key]}
                   onChange={(e) =>
                     setValues({ ...values, [f.key]: e.target.value })
@@ -591,6 +620,24 @@ function RecordEditor({
               )}
             </label>
           ))}
+          {resource === 'users' && (
+            <label style={{ display: 'grid', gap: 6, marginBottom: 12 }}>
+              Confirm Password{!record.id ? ' *' : ''}
+              <Input
+                type={passwordVisible ? 'text' : 'password'}
+                required={!record.id || Boolean(values.password)}
+                minLength={values.password ? 12 : undefined}
+                autoComplete="new-password"
+                placeholder={
+                  record.id ? 'Re-enter the new password' : 'Re-enter password'
+                }
+                value={passwordConfirmation}
+                onChange={(event) =>
+                  setPasswordConfirmation(event.target.value)
+                }
+              />
+            </label>
+          )}
           {error && <p role="alert">{error}</p>}
           <div className="ws-actions">
             {Boolean(

@@ -912,13 +912,11 @@ export default function LeadsExplorer() {
                   </div>
                   <div>
                     <dt>Follow-up</dt>
-                    <dd>{lead.followUp}</dd>
-                  </div>
-                  <div>
-                    <dt>Follow-up Date</dt>
                     <dd>
                       <CalendarClock size={12} />
-                      {lead.followUpDate ? dateLabel(lead.followUpDate) : 'Not set'}
+                      {lead.followUpDate
+                        ? dateLabel(lead.followUpDate)
+                        : lead.followUp}
                     </dd>
                   </div>
                 </dl>
