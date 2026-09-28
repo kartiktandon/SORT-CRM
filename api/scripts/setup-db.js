@@ -12,7 +12,7 @@ try {
   if(sql.startsWith('CREATE DATABASE')||sql.startsWith('USE '))continue;
   await connection.query(sql.replace('CREATE TABLE ','CREATE TABLE IF NOT EXISTS '));
  }
- const additions={users:{password_hash:'VARCHAR(200) NULL',phone:'VARCHAR(190) NULL'},leads:{platform:"VARCHAR(20) DEFAULT 'Website'",city:'VARCHAR(190)',budget:'VARCHAR(190)',service:'VARCHAR(190)',timeline:'VARCHAR(190)',owner:'VARCHAR(190)',follow_up:"VARCHAR(30) DEFAULT 'No follow-up'",temperature:'VARCHAR(30)'},tasks:{client_name:'VARCHAR(190)',assignee_name:'VARCHAR(190)'}};
+ const additions={users:{password_hash:'VARCHAR(200) NULL',phone:'VARCHAR(190) NULL'},leads:{platform:"VARCHAR(20) DEFAULT 'Website'",city:'VARCHAR(190)',budget:'VARCHAR(190)',service:'VARCHAR(190)',timeline:'VARCHAR(190)',owner:'VARCHAR(190)',follow_up:"VARCHAR(30) DEFAULT 'No follow-up'",follow_up_date:'DATE NULL',temperature:'VARCHAR(30)'},tasks:{client_name:'VARCHAR(190)',assignee_name:'VARCHAR(190)'}};
  for(const [table,columns]of Object.entries(additions))for(const [column,definition]of Object.entries(columns)){
   const [rows]=await connection.execute('SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME=? AND COLUMN_NAME=?',[name,table,column]);
   if(!rows.length)await connection.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`);

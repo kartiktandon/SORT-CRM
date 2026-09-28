@@ -13,7 +13,7 @@ CREATE TABLE leads (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(120) NOT NULL, company VARCHAR(160), email VARCHAR(190), phone VARCHAR(40),
   source VARCHAR(80), status ENUM('New leads','Contacted','Interested','Proposal','Closed','Lost') DEFAULT 'New leads',
-  estimated_value DECIMAL(12,2) DEFAULT 0, notes TEXT,
+  estimated_value DECIMAL(12,2) DEFAULT 0, notes TEXT, follow_up_date DATE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 CREATE TABLE lead_notes (

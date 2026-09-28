@@ -66,6 +66,7 @@ type Lead = SeedLead & {
   timeline: string;
   owner: string;
   followUp: string;
+  followUpDate: string;
   notes: string;
 };
 type LeadNote = {
@@ -140,6 +141,7 @@ const emptyLead: Lead = {
   timeline: '',
   owner: '',
   followUp: 'No follow-up',
+  followUpDate: '',
   notes: '',
 };
 function tone(stage: string) {
@@ -157,6 +159,7 @@ function exportLeads(leads: Lead[]) {
     'budget',
     'owner',
     'followUp',
+    'followUpDate',
   ] as const;
   const escape = (value: string) =>
     `"${(/^[=+@-]/.test(value) ? "'" : '') + value.replaceAll('"', '""')}"`;
@@ -205,6 +208,7 @@ export default function LeadsExplorer() {
     timeline: text(row, 'timeline'),
     owner: text(row, 'owner'),
     followUp: text(row, 'follow_up') || 'No follow-up',
+    followUpDate: text(row, 'follow_up_date').slice(0, 10),
     notes: text(row, 'notes'),
   }));
   const saveLead = async (lead: Lead, newNote: string) => {
@@ -224,6 +228,7 @@ export default function LeadsExplorer() {
       timeline: lead.timeline,
       owner: lead.owner,
       follow_up: lead.followUp,
+      follow_up_date: lead.followUpDate,
       ...(lead.id ? {} : { notes: '' }),
     });
     if (newNote.trim()) {
@@ -909,6 +914,13 @@ export default function LeadsExplorer() {
                     <dt>Follow-up</dt>
                     <dd>{lead.followUp}</dd>
                   </div>
+                  <div>
+                    <dt>Follow-up Date</dt>
+                    <dd>
+                      <CalendarClock size={12} />
+                      {lead.followUpDate ? dateLabel(lead.followUpDate) : 'Not set'}
+                    </dd>
+                  </div>
                 </dl>
                 <div className="lx-card-actions">
                   {lead.phone ? (
@@ -998,6 +1010,7 @@ export default function LeadsExplorer() {
                   'Stage',
                   'Owner',
                   'Follow-up',
+                  'Follow-up Date',
                   'Actions',
                 ].map((label) => (
                   <th key={label}>{label}</th>
@@ -1041,6 +1054,7 @@ export default function LeadsExplorer() {
                   <td>{stageBadge(lead)}</td>
                   <td>{lead.owner || 'Unassigned'}</td>
                   <td>{lead.followUp}</td>
+                  <td>{dateLabel(lead.followUpDate)}</td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <button
@@ -1362,7 +1376,7 @@ export default function LeadsExplorer() {
                       />
                     </div>
 
-                    <div className="lx-field-group" style={{ gridColumn: 'span 2' }}>
+                    <div className="lx-field-group">
                       <label htmlFor="lead-followup" className="lx-field-label">
                         Follow-up Schedule
                       </label>
@@ -1377,6 +1391,21 @@ export default function LeadsExplorer() {
                         ],
                         (value) => setDraft({ ...draft, followUp: value }),
                       )}
+                    </div>
+
+                    <div className="lx-field-group">
+                      <label htmlFor="lead-followup-date" className="lx-field-label">
+                        Follow-up Date
+                      </label>
+                      <Input
+                        id="lead-followup-date"
+                        type="date"
+                        className="lx-field-input"
+                        value={draft.followUpDate}
+                        onChange={(e) =>
+                          setDraft({ ...draft, followUpDate: e.target.value })
+                        }
+                      />
                     </div>
                   </div>
                 )}

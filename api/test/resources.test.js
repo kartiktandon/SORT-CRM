@@ -36,3 +36,22 @@ void test('allows editing a team member without changing the password', () => {
     job_title: 'Developer',
   });
 });
+
+void test('accepts a follow-up date for a lead', () => {
+  assert.deepEqual(validate('leads', { follow_up_date: '2026-10-15' }), {
+    follow_up_date: '2026-10-15',
+  });
+});
+
+void test('allows a lead follow-up date to be cleared', () => {
+  assert.deepEqual(validate('leads', { follow_up_date: '' }), {
+    follow_up_date: null,
+  });
+});
+
+void test('rejects an invalid lead follow-up date', () => {
+  assert.throws(
+    () => validate('leads', { follow_up_date: '15/10/2026' }),
+    /Invalid follow_up_date/,
+  );
+});
