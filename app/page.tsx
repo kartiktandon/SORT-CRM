@@ -7,7 +7,6 @@ import WorkspaceContent from './workspace';
 import { CrmProvider, useCrm, useRecords } from './crm-data';
 import {
   ArrowUpRight,
-  BarChart3,
   Building2,
   CalendarDays,
   CircleDollarSign,
@@ -17,7 +16,6 @@ import {
   LayoutDashboard,
   Menu,
   MoreHorizontal,
-  Receipt,
   Target,
   Users,
   X,
@@ -41,10 +39,8 @@ const navigation = [
     label: 'Business',
     items: [
       ['Finance', CircleDollarSign],
-      ['Expenses', Receipt],
       ['Agreements', FileText],
       ['Team', Users],
-      ['Reports', BarChart3],
     ],
   },
 ] as const;

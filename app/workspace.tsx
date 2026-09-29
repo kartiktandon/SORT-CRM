@@ -2235,23 +2235,7 @@ ${form.footerText}
 }
 
 function TeamView() {
-  const [tab, setTab] = useState('Team');
-  return (
-    <>
-      <Tabs
-        items={['Team', 'Tasks', 'Daily Activity', 'Calls', 'Time Tracking']}
-        active={tab}
-        onChange={setTab}
-      />
-      {tab === 'Team' ? (
-        <ResourceView resource="users" />
-      ) : tab === 'Tasks' ? (
-        <ResourceView resource="tasks" />
-      ) : (
-        <p className="ws-empty">{tab} tracking is not connected yet.</p>
-      )}
-    </>
-  );
+  return <ResourceView resource="users" />;
 }
 function TasksView({ calendar }: { calendar: boolean }) {
   const { user, save, busy } = useCrm();
