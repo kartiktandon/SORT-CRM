@@ -407,8 +407,6 @@ const definitions: Record<
       field('name', 'Name', { required: true }),
       field('email', 'Email', { kind: 'email', required: true }),
       field('password', 'Password', { kind: 'password', required: true }),
-      field('job_title', 'Job Title'),
-      field('phone', 'Phone'),
       statusField(['active', 'away', 'inactive']),
     ],
   },
@@ -478,7 +476,6 @@ function RecordEditor({
     ),
   );
   const [error, setError] = useState('');
-  const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   return (
     <Dialog
@@ -506,13 +503,6 @@ function RecordEditor({
             event.preventDefault();
             if (busy) return;
             setError('');
-            if (
-              resource === 'users' &&
-              values.password !== passwordConfirmation
-            ) {
-              setError('Password and confirm password must match.');
-              return;
-            }
             try {
               const payload: Partial<RecordData> = record.id
                 ? { id: record.id }
@@ -593,7 +583,7 @@ function RecordEditor({
                     type="button"
                     className="ws-password-toggle"
                     onClick={() => setPasswordVisible((visible) => !visible)}
-                    aria-label={passwordVisible ? 'Hide passwords' : 'Show passwords'}
+                    aria-label={passwordVisible ? 'Hide password' : 'Show password'}
                     aria-pressed={passwordVisible}
                   >
                     {passwordVisible ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -620,24 +610,6 @@ function RecordEditor({
               )}
             </label>
           ))}
-          {resource === 'users' && (
-            <label style={{ display: 'grid', gap: 6, marginBottom: 12 }}>
-              Confirm Password{!record.id ? ' *' : ''}
-              <Input
-                type={passwordVisible ? 'text' : 'password'}
-                required={!record.id || Boolean(values.password)}
-                minLength={values.password ? 12 : undefined}
-                autoComplete="new-password"
-                placeholder={
-                  record.id ? 'Re-enter the new password' : 'Re-enter password'
-                }
-                value={passwordConfirmation}
-                onChange={(event) =>
-                  setPasswordConfirmation(event.target.value)
-                }
-              />
-            </label>
-          )}
           {error && <p role="alert">{error}</p>}
           <div className="ws-actions">
             {Boolean(
