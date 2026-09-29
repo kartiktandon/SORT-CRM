@@ -495,7 +495,7 @@ function RecordEditor({
           {resource === 'users'
             ? record.id
               ? 'Update this member’s details. Leave password blank to keep the current password.'
-              : 'Create separate login credentials for this team member. Passwords must be at least 12 characters.'
+              : 'Create separate login credentials for this team member. Passwords must be at least 6 characters.'
             : 'Changes are saved to your workspace database.'}
         </DialogDescription>
         <form
@@ -569,7 +569,7 @@ function RecordEditor({
                   <Input
                     type={passwordVisible ? 'text' : 'password'}
                     required={!record.id}
-                    minLength={12}
+                    minLength={6}
                     autoComplete="new-password"
                     placeholder={
                       record.id ? 'Leave blank to keep current password' : undefined

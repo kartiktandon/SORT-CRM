@@ -20,11 +20,21 @@ void test('accepts a strong team-member password without trimming it', () => {
   assert.equal(result.password, password);
 });
 
-void test('rejects a team-member password shorter than 12 characters', () => {
+void test('accepts a team-member password with 6 characters', () => {
+  const result = validate(
+    'users',
+    { name: 'Team Member', email: 'member@example.com', password: 'sixsix' },
+    true,
+  );
+
+  assert.equal(result.password, 'sixsix');
+});
+
+void test('rejects a team-member password shorter than 6 characters', () => {
   assert.throws(
     () => validate(
       'users',
-      { name: 'Team Member', email: 'member@example.com', password: 'too-short' },
+      { name: 'Team Member', email: 'member@example.com', password: 'short' },
       true,
     ),
     /Invalid password/,

@@ -38,7 +38,7 @@ export function validate(resource, body, create = false) {
         } catch { fail(); }
       }
     } else if (kind==='password') {
-      if(typeof value!=='string'||value.length<12||value.length>1024)fail();
+      if(typeof value!=='string'||value.length<6||value.length>1024)fail();
     } else { if(typeof value!=='string')fail();value=value.trim(); if(value.length>(kind==='long'?20000:190))fail();if(kind==='email'&&value&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))fail(); }
     output[key]=value;
   }

@@ -27,7 +27,7 @@ the certificate contents in `MYSQL_SSL_CA`. Certificate paths resolve relative t
 
 The frontend runs on port 3000 and proxies `/api` to port 4000. Sign in at
 `http://localhost:3000/login` with the administrator created by `admin:create`.
-This command prompts for a name, email, and hidden password of at least 12 characters.
+This command prompts for a name, email, and hidden password of at least 6 characters.
 There are no default accounts or sample records. Existing configured `.env` files
 should be preserved rather than replaced with the example.
 
