@@ -683,6 +683,19 @@
 }
 
 /* ── Workspace Dashboard Grid ────────────────────────────── */
+.ws-content .ws-dashboard-hint {
+  margin: -8px 0 14px;
+  color: #64748b;
+  font-size: 11.5px;
+}
+.ws-content .ws-draggable-dashboard [data-widget-id] > div {
+  border: 1px solid var(--ws-border);
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+.ws-content .ws-draggable-dashboard [data-widget-id]:hover > div {
+  border-color: #cbd5e1;
+}
 .ws-content .ws-dashboard-grid {
   display: grid;
   grid-template-columns: 1.25fr 1fr 1fr;

@@ -4,6 +4,7 @@ import { useState, type CSSProperties } from 'react';
 import {
   BarChart3,
   Briefcase,
+  CalendarDays,
   CalendarClock,
   ChevronLeft,
   ChevronRight,
@@ -16,16 +17,20 @@ import {
   Camera,
   LayoutGrid,
   List,
+  Heart,
   Mail,
   MapPin,
   MessageSquare,
+  Package,
   Phone,
+  PhoneCall,
   Plus,
   Search,
   SlidersHorizontal,
   Target,
   Trash2,
   Trophy,
+  UserRound,
   UserPlus,
   Users,
   X,
@@ -68,6 +73,7 @@ type Lead = SeedLead & {
   followUp: string;
   followUpDate: string;
   notes: string;
+  createdAt: string;
 };
 type LeadNote = {
   id: number;
@@ -143,6 +149,30 @@ const emptyLead: Lead = {
   followUp: 'No follow-up',
   followUpDate: '',
   notes: '',
+  createdAt: '',
+};
+
+type DateRange = 'All Dates' | 'Today' | 'Last 7 Days' | 'Last 30 Days' | 'This Month';
+
+const leadDate = (lead: Lead) => {
+  const value = new Date(lead.createdAt);
+  return Number.isFinite(value.getTime()) ? value : null;
+};
+
+const isInDateRange = (lead: Lead, range: DateRange) => {
+  if (range === 'All Dates') return true;
+  const date = leadDate(lead);
+  if (!date) return false;
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (range === 'Today') return date >= startToday;
+  if (range === 'This Month') {
+    return date >= new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+  const days = range === 'Last 7 Days' ? 7 : 30;
+  const start = new Date(startToday);
+  start.setDate(start.getDate() - (days - 1));
+  return date >= start;
 };
 function tone(stage: string) {
   return stage === 'Proposal Sent' ? 'proposal' : stage.toLowerCase();
@@ -210,6 +240,7 @@ export default function LeadsExplorer() {
     followUp: text(row, 'follow_up') || 'No follow-up',
     followUpDate: text(row, 'follow_up_date').slice(0, 10),
     notes: text(row, 'notes'),
+    createdAt: text(row, 'created_at'),
   }));
   const saveLead = async (lead: Lead, newNote: string) => {
     const savedLead = await save('leads', {
@@ -242,6 +273,9 @@ export default function LeadsExplorer() {
   const [owner, setOwner] = useState('All Owners');
   const [city, setCity] = useState('All Cities');
   const [priority, setPriority] = useState('All Priorities');
+  const [company, setCompany] = useState('All Companies');
+  const [dateRange, setDateRange] = useState<DateRange>('All Dates');
+  const [quickFilter, setQuickFilter] = useState<'All' | 'Follow Up' | 'Call Back'>('All');
   const [filters, setFilters] = useState(false);
   const [analytics, setAnalytics] = useState(false);
   const [view, setView] = useState('Cards');
@@ -254,6 +288,14 @@ export default function LeadsExplorer() {
   const [notice, setNotice] = useState('');
   const [bulkStage, setBulkStage] = useState('New');
   const [scope, setScope] = useState('All Leads');
+  const companies = Array.from(
+    new Set(leads.map((lead) => lead.company).filter(Boolean)),
+  ).sort((a, b) => a.localeCompare(b));
+  const metricScopedLeads = leads.filter(
+    (lead) =>
+      isInDateRange(lead, dateRange) &&
+      (company === 'All Companies' || lead.company === company),
+  );
   const filtered = leads
     .filter(
       (lead) =>
@@ -268,9 +310,21 @@ export default function LeadsExplorer() {
           (owner === 'Unassigned' ? !lead.owner : lead.owner === owner)) &&
         (city === 'All Cities' || lead.city === city) &&
         (priority === 'All Priorities' || lead.temperature === priority) &&
+        (company === 'All Companies' || lead.company === company) &&
+        isInDateRange(lead, dateRange) &&
+        (quickFilter === 'All' ||
+          (quickFilter === 'Follow Up'
+            ? lead.followUp !== 'No follow-up' || Boolean(lead.followUpDate)
+            : lead.followUp === 'Due Today' ||
+              lead.followUp === 'Overdue' ||
+              lead.stage === 'Ringing')) &&
         (scope === 'All Leads' || lead.owner === user.name),
     )
-    .sort((a, b) => (newest ? b.id - a.id : a.id - b.id));
+    .sort((a, b) => {
+      const aTime = leadDate(a)?.getTime() || a.id;
+      const bTime = leadDate(b)?.getTime() || b.id;
+      return newest ? bTime - aTime : aTime - bTime;
+    });
   const totalPages = Math.max(1, Math.ceil(filtered.length / 12));
   const currentPage = Math.min(page, totalPages);
   const visible = filtered.slice((currentPage - 1) * 12, currentPage * 12);
@@ -282,6 +336,9 @@ export default function LeadsExplorer() {
     setOwner('All Owners');
     setCity('All Cities');
     setPriority('All Priorities');
+    setCompany('All Companies');
+    setDateRange('All Dates');
+    setQuickFilter('All');
     setScope('All Leads');
     setPage(1);
   };
@@ -326,7 +383,7 @@ export default function LeadsExplorer() {
     setDetailTab(tab);
   };
   const count = (predicate: (lead: Lead) => boolean) =>
-    leads.filter(predicate).length;
+    metricScopedLeads.filter(predicate).length;
   const filterCount = [
     platform !== 'All Platforms',
     stage !== 'All Stages',
@@ -334,6 +391,9 @@ export default function LeadsExplorer() {
     owner !== 'All Owners',
     city !== 'All Cities',
     priority !== 'All Priorities',
+    company !== 'All Companies',
+    dateRange !== 'All Dates',
+    quickFilter !== 'All',
   ].filter(Boolean).length;
   const applyStage = async () => {
     let updated = 0;
@@ -374,6 +434,105 @@ export default function LeadsExplorer() {
       </span>
     );
   };
+  const metricCards = [
+    {
+      label: 'Total Leads',
+      value: metricScopedLeads.length,
+      icon: UserRound,
+      tone: 'purple',
+      selected: stage === 'All Stages' && followUp === 'Follow-ups',
+      action: reset,
+    },
+    {
+      label: "Today's Leads",
+      value: count((lead) => isInDateRange(lead, 'Today')),
+      icon: CalendarDays,
+      tone: 'blue',
+      action: () => {
+        setQuickFilter('All');
+        setDateRange('Today');
+        setPage(1);
+      },
+    },
+    {
+      label: 'New Leads',
+      value: count((lead) => lead.stage === 'New'),
+      icon: Plus,
+      tone: 'orange',
+      selected: stage === 'New',
+      action: () => {
+        setQuickFilter('All');
+        setStage('New');
+        setPage(1);
+      },
+    },
+    {
+      label: 'Follow Up',
+      value: count(
+        (lead) =>
+          lead.followUp !== 'No follow-up' || Boolean(lead.followUpDate),
+      ),
+      icon: Clock3,
+      tone: 'green',
+      selected: quickFilter === 'Follow Up',
+      action: () => {
+        setQuickFilter('Follow Up');
+        setPage(1);
+      },
+    },
+    {
+      label: 'Call Back',
+      value: count(
+        (lead) =>
+          lead.followUp === 'Due Today' ||
+          lead.followUp === 'Overdue' ||
+          lead.stage === 'Ringing',
+      ),
+      icon: PhoneCall,
+      tone: 'teal',
+      selected: quickFilter === 'Call Back',
+      action: () => {
+        setQuickFilter('Call Back');
+        setPage(1);
+      },
+    },
+    {
+      label: 'Interested',
+      value: count((lead) => lead.stage === 'Interested'),
+      icon: Heart,
+      tone: 'red',
+      selected: stage === 'Interested',
+      action: () => {
+        setQuickFilter('All');
+        setStage('Interested');
+        setPage(1);
+      },
+    },
+    {
+      label: 'Packages Sent',
+      value: count((lead) => lead.stage === 'Proposal Sent'),
+      icon: Package,
+      tone: 'sky',
+      selected: stage === 'Proposal Sent',
+      action: () => {
+        setQuickFilter('All');
+        setStage('Proposal Sent');
+        setPage(1);
+      },
+    },
+    {
+      label: 'Closed / Won',
+      value: count((lead) => lead.stage === 'Won'),
+      icon: Crown,
+      tone: 'violet',
+      selected: stage === 'Won',
+      action: () => {
+        setQuickFilter('All');
+        setStage('Won');
+        setPage(1);
+      },
+    },
+  ];
   const select = (
     label: string,
     value: string,
@@ -414,6 +573,60 @@ export default function LeadsExplorer() {
   );
   return (
     <section className="lx-leads">
+      <div className="lx-reference-toolbar">
+        <label>
+          <span>Company</span>
+          <select
+            aria-label="Filter leads by company"
+            value={company}
+            onChange={(event) => {
+              setCompany(event.target.value);
+              setPage(1);
+            }}
+          >
+            <option>All Companies</option>
+            {companies.map((item) => (
+              <option key={item}>{item}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="lx-welcome">
+        <div>
+          <strong>👋 Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'}, {user.name}!</strong>
+          <p>Let&apos;s turn every lead into an unforgettable celebration.</p>
+        </div>
+        <select
+          aria-label="Filter leads by creation date"
+          value={dateRange}
+          onChange={(event) => {
+            setDateRange(event.target.value as DateRange);
+            setPage(1);
+          }}
+        >
+          {['All Dates', 'Today', 'Last 7 Days', 'Last 30 Days', 'This Month'].map(
+            (item) => (
+              <option key={item}>{item}</option>
+            ),
+          )}
+        </select>
+      </div>
+      <div className="lx-metrics" aria-label="Lead status overview">
+        {metricCards.map(({ label, value, icon: Icon, tone, selected: active, action }) => (
+          <button
+            type="button"
+            key={label}
+            className={`lx-metric lx-metric-${tone} ${active ? 'active' : ''}`}
+            onClick={action}
+          >
+            <span className="lx-metric-icon"><Icon size={25} /></span>
+            <span className="lx-metric-copy">
+              <strong>{value}</strong>
+              <small>{label}</small>
+            </span>
+          </button>
+        ))}
+      </div>
       <div className="lx-heading">
         <div>
           <h3>Leads</h3>
@@ -456,7 +669,7 @@ export default function LeadsExplorer() {
           </button>
         </div>
       </div>
-      <div className="lx-summary" aria-label="Lead summary filters">
+      <div className="lx-summary lx-summary-secondary" aria-label="Lead summary filters">
         <button className="indigo" onClick={reset}>
           <Users size={12} />
           {leads.length} leads

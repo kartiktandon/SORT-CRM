@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Clock3,
   Copy,
   Download,
   Eye,
@@ -39,12 +38,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from '@/components/ui/chart';
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
-import {
   useCrm,
   useRecords,
   text,
@@ -54,6 +47,9 @@ import {
 } from './crm-data';
 import './workspace.css';
 import LeadsExplorer from './leads';
+import DraggableWidgetGridDemo, {
+  type DashboardMetrics,
+} from '@/components/ui/draggable-widget-grid-demo';
 
 type Row = ReactNode[];
 const today = () => new Date().toLocaleDateString('en-CA');
@@ -825,35 +821,6 @@ function Dashboard({ navigate }: { navigate: (value: string) => void }) {
   const paid = invoices.filter((row) => row.status === 'Paid');
   const total = (rows: RecordData[]) =>
     rows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  const stats = [
-    ['Total Leads', leads.length],
-    ['Active Clients', clients.filter((row) => row.status === 'Active').length],
-    [
-      'Ongoing Projects',
-      projects.filter((row) => row.status !== 'Completed').length,
-    ],
-    ['Team Members', users.length],
-    [
-      'Paid Invoices (Mo.)',
-      money(
-        total(
-          paid.filter((row) =>
-            String(row.issue_date || '').startsWith(monthKey),
-          ),
-        ),
-      ),
-    ],
-    [
-      'Company Expenses (Mo.)',
-      money(
-        total(
-          expenses.filter((row) =>
-            String(row.date || '').startsWith(monthKey),
-          ),
-        ),
-      ),
-    ],
-  ];
   const revenue = Array.from({ length: 6 }, (_, i) => {
     const date = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
     const key =
@@ -879,6 +846,30 @@ function Dashboard({ navigate }: { navigate: (value: string) => void }) {
       );
     })
     .sort((a, b) => String(a.due_date).localeCompare(String(b.due_date)));
+  const dashboardMetrics: DashboardMetrics = {
+    leads: leads.length,
+    activeClients: clients.filter((row) => row.status === 'Active').length,
+    ongoingProjects: projects.filter((row) => row.status !== 'Completed').length,
+    teamMembers: users.length,
+    paidThisMonth: total(
+      paid.filter((row) => String(row.issue_date || '').startsWith(monthKey)),
+    ),
+    expensesThisMonth: total(
+      expenses.filter((row) => String(row.date || '').startsWith(monthKey)),
+    ),
+    revenue,
+    projectStatuses: ['Not started', 'In progress', 'On hold', 'Completed'].map(
+      (status) => ({
+        label: status,
+        value: projects.filter((row) => row.status === status).length,
+      }),
+    ),
+    tasks: due.map((task) => ({
+      id: task.id,
+      title: text(task, 'title'),
+      dueDate: dateLabel(task.due_date),
+    })),
+  };
   return (
     <>
       <section className="welcome ws-welcome">
@@ -889,71 +880,10 @@ function Dashboard({ navigate }: { navigate: (value: string) => void }) {
           <p>Here’s what’s happening in your workspace.</p>
         </div>
       </section>
-      <div className="ws-stats">
-        {stats.map(([label, value]) => (
-          <article key={label}>
-            <span>{label}</span>
-            <div>
-              <strong>{value}</strong>
-            </div>
-          </article>
-        ))}
-      </div>
-      <div className="ws-dashboard-grid">
-        <Panel title="Revenue vs Expenses (Last 6 Months)">
-          <ChartContainer
-            className="ws-revenue-chart"
-            config={{
-              amount: { label: 'Collected Revenue', color: '#4f46e5' },
-              expenses: { label: 'Company Spending', color: '#f43f5e' },
-            }}
-          >
-            <AreaChart data={revenue}>
-              <CartesianGrid vertical={false} />
-              <XAxis dataKey="month" />
-              <YAxis tickFormatter={(value) => money(value)} />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Area
-                dataKey="amount"
-                stroke="#4f46e5"
-                fill="#e0e7ff"
-                fillOpacity={0.6}
-                isAnimationActive={false}
-              />
-              <Area
-                dataKey="expenses"
-                stroke="#f43f5e"
-                fill="#ffe4e6"
-                fillOpacity={0.6}
-                isAnimationActive={false}
-              />
-            </AreaChart>
-          </ChartContainer>
-        </Panel>
-        <Panel title="Project Status">
-          <DataTable
-            columns={['Status', 'Projects']}
-            rows={['Not started', 'In progress', 'On hold', 'Completed'].map(
-              (status) => [
-                status,
-                projects.filter((row) => row.status === status).length,
-              ],
-            )}
-          />
-        </Panel>
-        <Panel title="Tasks Due in the Next 7 Days">
-          <div className="ws-due-list">
-            {due.map((task) => (
-              <button key={task.id} onClick={() => navigate('Tasks')}>
-                <Clock3 size={14} />
-                <span>{text(task, 'title')}</span>
-                <time>{dateLabel(task.due_date)}</time>
-              </button>
-            ))}
-            {!due.length && <p className="ws-empty">No tasks due.</p>}
-          </div>
-        </Panel>
-      </div>
+      <p className="ws-dashboard-hint">
+        Drag and rearrange widgets to customize your dashboard.
+      </p>
+      <DraggableWidgetGridDemo metrics={dashboardMetrics} onNavigate={navigate} />
     </>
   );
 }

@@ -16,6 +16,11 @@
   --line: #e2e8f0;
   --line-light: #f1f5f9;
   --card: #ffffff;
+  --card-foreground: #0f172a;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --border: #e2e8f0;
+  --ring: #6366f1;
   --nav: #0b0f19;
   --radius: 12px;
   --radius-sm: 8px;
