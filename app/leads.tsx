@@ -526,6 +526,8 @@ export default function LeadsExplorer() {
             key={label}
             className={`lx-metric lx-metric-${tone} ${active ? 'active' : ''}`}
             onClick={action}
+            aria-pressed={Boolean(active)}
+            title={`Filter leads by ${label}`}
           >
             <span className="lx-metric-icon"><Icon size={25} /></span>
             <span className="lx-metric-copy">
