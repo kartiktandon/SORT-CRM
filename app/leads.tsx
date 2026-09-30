@@ -8,9 +8,6 @@ import {
   CalendarClock,
   ChevronLeft,
   ChevronRight,
-  Clock3,
-  Crown,
-  Download,
   Eye,
   FileText,
   Globe,
@@ -29,10 +26,7 @@ import {
   SlidersHorizontal,
   Target,
   Trash2,
-  Trophy,
   UserRound,
-  UserPlus,
-  Users,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -130,27 +124,6 @@ const stageColors: Record<string, string> = {
   Lost: '#6486ac',
 };
 const platforms = ['Facebook', 'Instagram', 'Website'];
-const emptyLead: Lead = {
-  id: 0,
-  name: '',
-  company: '',
-  stage: 'New',
-  source: 'Website',
-  platform: 'Website',
-  age: 'Just now',
-  temperature: '',
-  phone: '',
-  email: '',
-  city: '',
-  budget: '',
-  service: '',
-  timeline: '',
-  owner: '',
-  followUp: 'No follow-up',
-  followUpDate: '',
-  notes: '',
-  createdAt: '',
-};
 
 type DateRange = 'All Dates' | 'Today' | 'Last 7 Days' | 'Last 30 Days' | 'This Month';
 
@@ -275,9 +248,8 @@ export default function LeadsExplorer() {
   const [priority, setPriority] = useState('All Priorities');
   const [company, setCompany] = useState('All Companies');
   const [dateRange, setDateRange] = useState<DateRange>('All Dates');
-  const [quickFilter, setQuickFilter] = useState<'All' | 'Follow Up' | 'Call Back'>('All');
   const [filters, setFilters] = useState(false);
-  const [analytics, setAnalytics] = useState(false);
+  const [analytics] = useState(false);
   const [view, setView] = useState('Cards');
   const [newest, setNewest] = useState(true);
   const [page, setPage] = useState(1);
@@ -288,9 +260,6 @@ export default function LeadsExplorer() {
   const [notice, setNotice] = useState('');
   const [bulkStage, setBulkStage] = useState('New');
   const [scope, setScope] = useState('All Leads');
-  const companies = Array.from(
-    new Set(leads.map((lead) => lead.company).filter(Boolean)),
-  ).sort((a, b) => a.localeCompare(b));
   const metricScopedLeads = leads.filter(
     (lead) =>
       isInDateRange(lead, dateRange) &&
@@ -312,12 +281,6 @@ export default function LeadsExplorer() {
         (priority === 'All Priorities' || lead.temperature === priority) &&
         (company === 'All Companies' || lead.company === company) &&
         isInDateRange(lead, dateRange) &&
-        (quickFilter === 'All' ||
-          (quickFilter === 'Follow Up'
-            ? lead.followUp !== 'No follow-up' || Boolean(lead.followUpDate)
-            : lead.followUp === 'Due Today' ||
-              lead.followUp === 'Overdue' ||
-              lead.stage === 'Ringing')) &&
         (scope === 'All Leads' || lead.owner === user.name),
     )
     .sort((a, b) => {
@@ -338,7 +301,6 @@ export default function LeadsExplorer() {
     setPriority('All Priorities');
     setCompany('All Companies');
     setDateRange('All Dates');
-    setQuickFilter('All');
     setScope('All Leads');
     setPage(1);
   };
@@ -393,7 +355,6 @@ export default function LeadsExplorer() {
     priority !== 'All Priorities',
     company !== 'All Companies',
     dateRange !== 'All Dates',
-    quickFilter !== 'All',
   ].filter(Boolean).length;
   const applyStage = async () => {
     let updated = 0;
@@ -449,7 +410,6 @@ export default function LeadsExplorer() {
       icon: CalendarDays,
       tone: 'blue',
       action: () => {
-        setQuickFilter('All');
         setDateRange('Today');
         setPage(1);
       },
@@ -461,38 +421,18 @@ export default function LeadsExplorer() {
       tone: 'orange',
       selected: stage === 'New',
       action: () => {
-        setQuickFilter('All');
         setStage('New');
         setPage(1);
       },
     },
     {
-      label: 'Follow Up',
-      value: count(
-        (lead) =>
-          lead.followUp !== 'No follow-up' || Boolean(lead.followUpDate),
-      ),
-      icon: Clock3,
-      tone: 'green',
-      selected: quickFilter === 'Follow Up',
-      action: () => {
-        setQuickFilter('Follow Up');
-        setPage(1);
-      },
-    },
-    {
-      label: 'Call Back',
-      value: count(
-        (lead) =>
-          lead.followUp === 'Due Today' ||
-          lead.followUp === 'Overdue' ||
-          lead.stage === 'Ringing',
-      ),
+      label: 'Ringing',
+      value: count((lead) => lead.stage === 'Ringing'),
       icon: PhoneCall,
       tone: 'teal',
-      selected: quickFilter === 'Call Back',
+      selected: stage === 'Ringing',
       action: () => {
-        setQuickFilter('Call Back');
+        setStage('Ringing');
         setPage(1);
       },
     },
@@ -503,7 +443,6 @@ export default function LeadsExplorer() {
       tone: 'red',
       selected: stage === 'Interested',
       action: () => {
-        setQuickFilter('All');
         setStage('Interested');
         setPage(1);
       },
@@ -515,20 +454,7 @@ export default function LeadsExplorer() {
       tone: 'sky',
       selected: stage === 'Proposal Sent',
       action: () => {
-        setQuickFilter('All');
         setStage('Proposal Sent');
-        setPage(1);
-      },
-    },
-    {
-      label: 'Closed / Won',
-      value: count((lead) => lead.stage === 'Won'),
-      icon: Crown,
-      tone: 'violet',
-      selected: stage === 'Won',
-      action: () => {
-        setQuickFilter('All');
-        setStage('Won');
         setPage(1);
       },
     },
@@ -573,24 +499,6 @@ export default function LeadsExplorer() {
   );
   return (
     <section className="lx-leads">
-      <div className="lx-reference-toolbar">
-        <label>
-          <span>Company</span>
-          <select
-            aria-label="Filter leads by company"
-            value={company}
-            onChange={(event) => {
-              setCompany(event.target.value);
-              setPage(1);
-            }}
-          >
-            <option>All Companies</option>
-            {companies.map((item) => (
-              <option key={item}>{item}</option>
-            ))}
-          </select>
-        </label>
-      </div>
       <div className="lx-welcome">
         <div>
           <strong>👋 Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'}, {user.name}!</strong>
@@ -626,145 +534,6 @@ export default function LeadsExplorer() {
             </span>
           </button>
         ))}
-      </div>
-      <div className="lx-heading">
-        <div>
-          <h3>Leads</h3>
-          <p>Every opportunity. One clear view.</p>
-        </div>
-        <div className="lx-heading-actions">
-          <Button
-            className="ws-button"
-            onClick={() => {
-              setDraft({ ...emptyLead });
-              setNewNote('');
-              setDetailTab('Overview');
-            }}
-          >
-            <UserPlus size={14} />
-            Add Lead
-          </Button>
-          <button
-            className="lx-icon-button"
-            aria-label="Export leads as CSV"
-            title="Export CSV"
-            onClick={() =>
-              exportLeads(
-                selected.length
-                  ? leads.filter((lead) => selected.includes(lead.id))
-                  : filtered,
-              )
-            }
-          >
-            <Download size={15} />
-          </button>
-          <button
-            className={`lx-icon-button ${analytics ? 'active' : ''}`}
-            aria-label="Toggle lead analytics"
-            aria-pressed={analytics}
-            title="Analytics"
-            onClick={() => setAnalytics(!analytics)}
-          >
-            <BarChart3 size={15} />
-          </button>
-        </div>
-      </div>
-      <div className="lx-summary lx-summary-secondary" aria-label="Lead summary filters">
-        <button className="indigo" onClick={reset}>
-          <Users size={12} />
-          {leads.length} leads
-        </button>
-        <button
-          className="amber"
-          onClick={() => {
-            setFollowUp('Due Today');
-            setPage(1);
-          }}
-        >
-          <Clock3 size={12} />
-          {count((lead) => lead.followUp === 'Due Today')} due today
-        </button>
-        <button
-          className="red"
-          onClick={() => {
-            setFollowUp('Overdue');
-            setPage(1);
-          }}
-        >
-          <CalendarClock size={12} />
-          {count((lead) => lead.followUp === 'Overdue')} overdue
-        </button>
-        <button
-          className="violet"
-          onClick={() => {
-            setFollowUp('Upcoming (7d)');
-            setPage(1);
-          }}
-        >
-          {count((lead) => lead.followUp === 'Upcoming (7d)')} upcoming
-        </button>
-        <button
-          className="orange"
-          onClick={() => {
-            setOwner('Unassigned');
-            setPage(1);
-          }}
-        >
-          {count((lead) => !lead.owner)} unassigned
-        </button>
-        <button
-          className="green"
-          onClick={() => {
-            setStage('Won');
-            setPage(1);
-          }}
-        >
-          <Trophy size={12} />
-          {count((lead) => lead.stage === 'Won')} won
-        </button>
-        <button className="cyan" onClick={() => setAnalytics(!analytics)}>
-          {Math.round(
-            (count((lead) => lead.stage === 'Won') /
-              Math.max(1, leads.length)) *
-              100,
-          )}
-          % conv
-        </button>
-        {platforms.map((item) => (
-          <button
-            key={item}
-            className={
-              item === 'Facebook'
-                ? 'indigo'
-                : item === 'Instagram'
-                  ? 'violet'
-                  : 'green'
-            }
-            aria-label={`Filter ${item} leads`}
-            onClick={() => {
-              setPlatform(platform === item ? 'All Platforms' : item);
-              setPage(1);
-            }}
-          >
-            {platformMark(item)}
-            {count((lead) => lead.platform === item)}
-          </button>
-        ))}
-        <button
-          className="lx-ringing"
-          onClick={() => {
-            const candidates = leads.filter((lead) => lead.stage === 'Ringing');
-            if (candidates.length) {
-              openLead(
-                candidates[Math.floor(Math.random() * candidates.length)],
-              );
-              setNotice('Ringing of the Day: a lead to follow up with next.');
-            } else setNotice('No ringing leads at the moment.');
-          }}
-        >
-          <Crown size={12} />
-          Ringing of the Day
-        </button>
       </div>
       {analytics && (
         <div className="lx-analytics">
