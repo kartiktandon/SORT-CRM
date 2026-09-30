@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, type CSSProperties } from 'react';
+import { useState, type CSSProperties, type SyntheticEvent } from 'react';
 import {
+  ArrowLeft,
   BarChart3,
   Briefcase,
+  CheckCircle2,
   CalendarDays,
   CalendarClock,
   ChevronLeft,
@@ -19,10 +21,12 @@ import {
   MapPin,
   MessageSquare,
   Package,
+  Pencil,
   Phone,
   PhoneCall,
   Plus,
   Search,
+  Send,
   SlidersHorizontal,
   Target,
   Trash2,
@@ -124,6 +128,16 @@ const stageColors: Record<string, string> = {
   Lost: '#6486ac',
 };
 const platforms = ['Facebook', 'Instagram', 'Website'];
+
+const leadInitials = (name: string) =>
+  name
+    .trim()
+    .split(/\s+/)
+    .map((part) => part[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() || '?';
 
 type DateRange = 'All Dates' | 'Today' | 'Last 7 Days' | 'Last 30 Days' | 'This Month';
 
@@ -254,9 +268,11 @@ export default function LeadsExplorer() {
   const [newest, setNewest] = useState(true);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<number[]>([]);
+  const [focusedLeadId, setFocusedLeadId] = useState<number | null>(null);
   const [draft, setDraft] = useState<Lead | null>(null);
   const [detailTab, setDetailTab] = useState('Overview');
   const [newNote, setNewNote] = useState('');
+  const [activityNote, setActivityNote] = useState('');
   const [notice, setNotice] = useState('');
   const [bulkStage, setBulkStage] = useState('New');
   const [scope, setScope] = useState('All Leads');
@@ -291,6 +307,15 @@ export default function LeadsExplorer() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / 12));
   const currentPage = Math.min(page, totalPages);
   const visible = filtered.slice((currentPage - 1) * 12, currentPage * 12);
+  const focusedLead = leads.find((lead) => lead.id === focusedLeadId) || null;
+  const focusedLeadNotes = focusedLead
+    ? leadNotes
+        .filter((note) => note.leadId === focusedLead.id)
+        .sort(
+          (a, b) =>
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+        )
+    : [];
   const reset = () => {
     setQuery('');
     setPlatform('All Platforms');
@@ -318,6 +343,7 @@ export default function LeadsExplorer() {
       await remove('leads', lead.id);
       setSelected((prev) => prev.filter((id) => id !== lead.id));
       if (draft?.id === lead.id) setDraft(null);
+      if (focusedLeadId === lead.id) setFocusedLeadId(null);
       setNotice(`Lead "${lead.name}" has been deleted.`);
     } catch {
       setNotice('Failed to delete lead. Please try again.');
@@ -339,10 +365,31 @@ export default function LeadsExplorer() {
       setNotice('Failed to delete some leads. Please try again.');
     }
   };
-  const openLead = (lead: Lead, tab = 'Overview') => {
+  const editLead = (lead: Lead, tab = 'Overview') => {
     setDraft({ ...lead });
     setNewNote('');
     setDetailTab(tab);
+  };
+  const openLead = (lead: Lead) => {
+    setFocusedLeadId(lead.id);
+    setActivityNote('');
+  };
+  const addActivityNote = async () => {
+    if (!focusedLead || !activityNote.trim() || busy) return;
+    try {
+      await save('lead_notes', {
+        lead_id: focusedLead.id,
+        note: activityNote.trim(),
+      });
+      setActivityNote('');
+      setNotice(`Activity added for ${focusedLead.name}.`);
+    } catch {
+      setNotice('Unable to add the activity. Please try again.');
+    }
+  };
+  const submitActivityNote = (event: SyntheticEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void addActivityNote();
   };
   const count = (predicate: (lead: Lead) => boolean) =>
     metricScopedLeads.filter(predicate).length;
@@ -497,6 +544,198 @@ export default function LeadsExplorer() {
       ))}
     </select>
   );
+
+  if (focusedLead && !draft) {
+    const phoneHref = focusedLead.phone.replace(/[^+\d]/g, '');
+    const whatsappPhone = focusedLead.phone.replace(/\D/g, '');
+    return (
+      <section className="lx-leads lx-detail-workspace">
+        <header className="lx-detail-toolbar">
+          <button
+            type="button"
+            className="lx-back-button"
+            onClick={() => setFocusedLeadId(null)}
+          >
+            <ArrowLeft size={16} />
+            Back to leads
+          </button>
+          <div className="lx-detail-toolbar-copy">
+            <span>Lead workspace</span>
+            <strong>{focusedLead.name}</strong>
+          </div>
+          <div className="lx-detail-toolbar-actions">
+            <button
+              type="button"
+              className="lx-detail-edit"
+              onClick={() => editLead(focusedLead)}
+            >
+              <Pencil size={14} />
+              Edit lead
+            </button>
+            <button
+              type="button"
+              className="lx-detail-delete"
+              disabled={busy}
+              onClick={() => void deleteLead(focusedLead)}
+            >
+              <Trash2 size={14} />
+              Delete
+            </button>
+          </div>
+        </header>
+
+        {notice && (
+          <output className="lx-notice">
+            {notice}
+            <button aria-label="Dismiss notification" onClick={() => setNotice('')}>
+              <X size={14} />
+            </button>
+          </output>
+        )}
+
+        <div className="lx-profile-banner">
+          <div
+            className="lx-profile-initials"
+            style={{
+              background: `linear-gradient(135deg, ${stageColors[focusedLead.stage] || '#6366f1'}, #312e81)`,
+            }}
+            aria-hidden="true"
+          >
+            {leadInitials(focusedLead.name)}
+          </div>
+          <div className="lx-profile-copy">
+            <div className="lx-profile-title-line">
+              <h2>{focusedLead.name}</h2>
+              {stageBadge(focusedLead)}
+              {focusedLead.temperature && (
+                <span className={`lx-tag-priority priority-${focusedLead.temperature.toLowerCase()}`}>
+                  {focusedLead.temperature}
+                </span>
+              )}
+            </div>
+            <p>{focusedLead.company || 'Independent lead'}</p>
+            <span>Lead since {focusedLead.age} · {focusedLead.owner || 'Unassigned'}</span>
+          </div>
+          <nav className="lx-profile-actions" aria-label="Contact lead">
+            {focusedLead.phone ? (
+              <a href={`tel:${phoneHref}`}><Phone size={16} /><span>Call</span></a>
+            ) : (
+              <span className="disabled"><Phone size={16} /><span>No phone</span></span>
+            )}
+            {focusedLead.phone ? (
+              <a href={`https://wa.me/${whatsappPhone}`} target="_blank" rel="noreferrer">
+                <MessageSquare size={16} /><span>WhatsApp</span>
+              </a>
+            ) : (
+              <span className="disabled"><MessageSquare size={16} /><span>No WhatsApp</span></span>
+            )}
+            {focusedLead.email ? (
+              <a href={`mailto:${focusedLead.email}`}><Mail size={16} /><span>Email</span></a>
+            ) : (
+              <span className="disabled"><Mail size={16} /><span>No email</span></span>
+            )}
+          </nav>
+        </div>
+
+        <div className="lx-detail-layout">
+          <aside className="lx-detail-column lx-contact-summary">
+            <section className="lx-detail-panel">
+              <header><UserRound size={17} /><h3>Lead details</h3></header>
+              <dl className="lx-profile-fields">
+                <div><dt>Phone</dt><dd>{focusedLead.phone || 'Not provided'}</dd></div>
+                <div><dt>Email</dt><dd>{focusedLead.email || 'Not provided'}</dd></div>
+                <div><dt>City / Location</dt><dd>{focusedLead.city || 'Not provided'}</dd></div>
+                <div><dt>Company / Brand</dt><dd>{focusedLead.company || 'Not provided'}</dd></div>
+                <div><dt>Assigned owner</dt><dd>{focusedLead.owner || 'Unassigned'}</dd></div>
+                <div><dt>Created</dt><dd>{focusedLead.age}</dd></div>
+              </dl>
+            </section>
+            <section className="lx-detail-panel lx-interaction-panel">
+              <header><MessageSquare size={17} /><h3>Interactions</h3></header>
+              <div className="lx-interaction-stats">
+                <div><FileText size={17} /><span>Activity notes</span><strong>{focusedLeadNotes.length}</strong></div>
+                <div><PhoneCall size={17} /><span>Follow-up</span><strong>{focusedLead.followUp === 'No follow-up' ? 'None' : focusedLead.followUp}</strong></div>
+                <div><CalendarDays size={17} /><span>Next date</span><strong>{focusedLead.followUpDate ? dateLabel(focusedLead.followUpDate) : 'Not set'}</strong></div>
+              </div>
+            </section>
+          </aside>
+
+          <main className="lx-detail-column lx-activity-column">
+            <section className="lx-detail-panel lx-activity-panel">
+              <header className="lx-panel-heading">
+                <div><FileText size={17} /><h3>Activity timeline</h3></div>
+                <span>{focusedLeadNotes.length + 1} activities</span>
+              </header>
+              <form className="lx-activity-composer" onSubmit={submitActivityNote}>
+                <div className="lx-activity-composer-heading">
+                  <label htmlFor="lead-activity-note">Add an activity note</label>
+                  <span>{activityNote.length}/20000</span>
+                </div>
+                <textarea
+                  id="lead-activity-note"
+                  value={activityNote}
+                  onChange={(event) => setActivityNote(event.target.value)}
+                  placeholder="Add meeting notes, requirements, feedback, or the next action…"
+                  rows={3}
+                  maxLength={20000}
+                />
+                <div className="lx-activity-composer-actions">
+                  <span>Use this space for outcomes and clear next steps.</span>
+                  <button
+                    type="submit"
+                    disabled={busy || !activityNote.trim()}
+                  >
+                    <Send size={14} />
+                    {busy ? 'Saving…' : 'Add activity'}
+                  </button>
+                </div>
+              </form>
+              <div className="lx-activity-timeline">
+                {focusedLeadNotes.map((note) => (
+                  <article key={note.id} className="lx-activity-item">
+                    <span className="lx-activity-icon note"><MessageSquare size={15} /></span>
+                    <div>
+                      <header><strong>{note.userName}</strong><time dateTime={note.updatedAt}>{noteDateTime(note.updatedAt)}</time></header>
+                      <p>{note.note}</p>
+                    </div>
+                  </article>
+                ))}
+                <article className="lx-activity-item">
+                  <span className="lx-activity-icon created"><CheckCircle2 size={15} /></span>
+                  <div>
+                    <header><strong>Lead added to CRM</strong><time dateTime={focusedLead.createdAt}>{noteDateTime(focusedLead.createdAt)}</time></header>
+                    <p>{focusedLead.name} entered the pipeline through {focusedLead.platform || focusedLead.source || 'the CRM'}.</p>
+                  </div>
+                </article>
+              </div>
+            </section>
+          </main>
+
+          <aside className="lx-detail-column lx-opportunity-column">
+            <section className="lx-detail-panel lx-opportunity-panel">
+              <header><Target size={17} /><h3>Opportunity</h3></header>
+              <div className="lx-opportunity-stage" style={{ borderColor: stageColors[focusedLead.stage] || '#6366f1' }}>
+                <span>Current stage</span>
+                <strong style={{ color: stageColors[focusedLead.stage] || '#6366f1' }}>{focusedLead.stage}</strong>
+              </div>
+              <dl className="lx-opportunity-fields">
+                <div><dt>Budget</dt><dd>{focusedLead.budget || 'Not provided'}</dd></div>
+                <div><dt>Interested service</dt><dd>{focusedLead.service || 'Not provided'}</dd></div>
+                <div><dt>Project timeline</dt><dd>{focusedLead.timeline || 'Not provided'}</dd></div>
+                <div><dt>Source</dt><dd>{focusedLead.platform || focusedLead.source || 'Not provided'}</dd></div>
+                <div><dt>Follow-up status</dt><dd>{focusedLead.followUp}</dd></div>
+                <div><dt>Follow-up date</dt><dd>{focusedLead.followUpDate ? dateLabel(focusedLead.followUpDate) : 'Not scheduled'}</dd></div>
+              </dl>
+              <button type="button" className="lx-opportunity-edit" onClick={() => editLead(focusedLead)}>
+                <Pencil size={14} /> Edit opportunity
+              </button>
+            </section>
+          </aside>
+        </div>
+
+      </section>
+    );
+  }
   return (
     <section className="lx-leads">
       <div className="lx-welcome">
@@ -911,7 +1150,7 @@ export default function LeadsExplorer() {
                       Call
                     </a>
                   ) : (
-                    <button onClick={() => openLead(lead, 'Contact')}>
+                    <button onClick={() => editLead(lead, 'Contact')}>
                       <Phone size={12} />
                       Call
                     </button>
@@ -926,7 +1165,7 @@ export default function LeadsExplorer() {
                       WhatsApp
                     </a>
                   ) : (
-                    <button onClick={() => openLead(lead, 'Contact')}>
+                    <button onClick={() => editLead(lead, 'Contact')}>
                       <MessageSquare size={12} />
                       WhatsApp
                     </button>
