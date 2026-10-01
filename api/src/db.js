@@ -68,4 +68,5 @@ export const db = mysql.createPool({
   decimalNumbers: true,
   enableKeepAlive: true,
   keepAliveInitialDelay: 10000,
+  timezone: 'Z',
 });

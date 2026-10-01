@@ -39,6 +39,18 @@ Administrators create separate team-member sign-in credentials from the Team scr
 Passwords are hashed and never displayed after saving; editing a member allows an
 administrator to set a new password.
 
+## Google Calendar and Meet
+
+The Calendar screen can create, reschedule, and cancel Google Calendar events with
+native attendee invitation emails and automatically generated Google Meet links.
+One administrator connects the company organizer account under **Settings →
+Integrations**. Enable the Google Calendar API, configure an OAuth web client, add
+the callback URL from `api/.env.example`, and publish the OAuth consent screen for
+production use. Then set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+`GOOGLE_OAUTH_CALLBACK_URL`, and a 32-byte `GOOGLE_TOKEN_ENCRYPTION_KEY`, and run
+`npm run db:setup` inside `api/`. The refresh token is encrypted at rest. Never put
+these server credentials in frontend environment variables.
+
 For an opt-in integration check with both servers running, run
 `node scripts/check-integration.js` from `api/`. It creates uniquely named fixtures
 in the configured database, tests authentication and persistence through the frontend

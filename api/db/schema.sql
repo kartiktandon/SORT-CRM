@@ -83,3 +83,41 @@ CREATE TABLE expenses (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+CREATE TABLE google_calendar_connections (
+  id TINYINT UNSIGNED PRIMARY KEY,
+  email VARCHAR(190) NOT NULL,
+  refresh_token_encrypted TEXT NOT NULL,
+  scope TEXT,
+  connected_by BIGINT UNSIGNED,
+  connected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY(connected_by) REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE TABLE google_oauth_states (
+  state_hash CHAR(64) PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  expires_at DATETIME NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX(expires_at)
+);
+CREATE TABLE meetings (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  google_event_id VARCHAR(190) NOT NULL UNIQUE,
+  title VARCHAR(180) NOT NULL,
+  description TEXT,
+  start_at DATETIME NOT NULL,
+  end_at DATETIME NOT NULL,
+  time_zone VARCHAR(100) NOT NULL DEFAULT 'UTC',
+  attendee_emails JSON NOT NULL,
+  meet_url VARCHAR(500),
+  calendar_url VARCHAR(500),
+  status ENUM('scheduled','cancelled') NOT NULL DEFAULT 'scheduled',
+  created_by BIGINT UNSIGNED,
+  idempotency_key VARCHAR(100) UNIQUE,
+  cancelled_at DATETIME,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX(start_at), INDEX(status)
+);

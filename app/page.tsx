@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-static';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import WorkspaceContent from './workspace';
 import { CrmProvider, useCrm, useRecords } from './crm-data';
 import {
@@ -61,6 +61,11 @@ function Workspace() {
     .join('');
   const [active, setActive] = useState('Dashboard');
   const [mobileOpen, setMobileOpen] = useState(false);
+  useEffect(() => {
+    if (!new URLSearchParams(window.location.search).has('google')) return;
+    const frame = requestAnimationFrame(() => setActive('Settings'));
+    return () => cancelAnimationFrame(frame);
+  }, []);
   return (
     <div className="crm-shell">
       <aside className={`sidebar ${mobileOpen ? 'sidebar-open' : ''}`}>

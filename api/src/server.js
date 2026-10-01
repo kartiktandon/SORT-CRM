@@ -7,6 +7,21 @@ import { db } from './db.js';
 import { hashPassword, verifyPassword, tokenHash, readSession } from './security.js';
 import { resources, validate } from './resources.js';
 import { verifyWebhook, handleWebhook, handleTestLead, getMetaStatus } from './meta.js';
+import {
+  authorizationUrl,
+  cancelCalendarMeeting,
+  createCalendarMeeting,
+  decryptToken,
+  encryptToken,
+  exchangeAuthorizationCode,
+  getGoogleAccountEmail,
+  hashOAuthState,
+  meetLinkFromEvent,
+  revokeGoogleToken,
+  updateCalendarMeeting,
+  validateGoogleCalendarConfig,
+  validateMeetingInput,
+} from './google-calendar.js';
 
 const app = express();
 
@@ -222,6 +237,159 @@ app.post('/api/webhooks/facebook/test', asyncRoute(async (req, res) => {
 // H-5: Meta integration status — now behind auth middleware (no unauthenticated access)
 app.get('/api/integrations/meta/status', getMetaStatus);
 
+// ── Google Calendar and Meet integration ─────────────────────
+const requireAdmin = (req, res) => {
+  if (req.user.role === 'admin') return true;
+  res.status(403).json({ error: 'Administrator access required.' });
+  return false;
+};
+const frontendUrl = (path = '') => {
+  const origin = (process.env.FRONTEND_ORIGIN || 'http://localhost:3000').split(',')[0].trim().replace(/\/+$/, '');
+  return `${origin}${path}`;
+};
+const googleConnection = async () => {
+  const [rows] = await db.query('SELECT email,refresh_token_encrypted FROM google_calendar_connections WHERE id=1 LIMIT 1');
+  if (!rows.length) {
+    const error = new Error('Connect the company Google Calendar account before booking meetings.');
+    error.status = 409;
+    throw error;
+  }
+  return { email: rows[0].email, refreshToken: decryptToken(rows[0].refresh_token_encrypted) };
+};
+const publicMeeting = row => ({
+  ...row,
+  start_at: String(row.start_at).replace(' ', 'T') + (String(row.start_at).endsWith('Z') ? '' : 'Z'),
+  end_at: String(row.end_at).replace(' ', 'T') + (String(row.end_at).endsWith('Z') ? '' : 'Z'),
+  attendee_emails: typeof row.attendee_emails === 'string' ? JSON.parse(row.attendee_emails) : row.attendee_emails,
+});
+
+app.get('/api/integrations/google/status', asyncRoute(async (_req, res) => {
+  const [rows] = await db.query('SELECT email,connected_at,updated_at FROM google_calendar_connections WHERE id=1 LIMIT 1');
+  res.json({ connected: Boolean(rows.length), account: rows[0] || null });
+}));
+
+app.post('/api/integrations/google/connect', asyncRoute(async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  validateGoogleCalendarConfig();
+  const state = randomBytes(32).toString('hex');
+  await db.execute('DELETE FROM google_oauth_states WHERE expires_at<=NOW() OR user_id=?', [req.user.id]);
+  await db.execute(
+    'INSERT INTO google_oauth_states(state_hash,user_id,expires_at) VALUES(?,?,DATE_ADD(NOW(),INTERVAL 10 MINUTE))',
+    [hashOAuthState(state), req.user.id],
+  );
+  res.json({ url: authorizationUrl(state) });
+}));
+
+app.get('/api/integrations/google/callback', asyncRoute(async (req, res) => {
+  const redirect = (status, message) => res.redirect(frontendUrl(`/?google=${status}&message=${encodeURIComponent(message)}`));
+  if (typeof req.query.state !== 'string') return redirect('error', 'The Google authorization response was invalid.');
+  const stateHash = hashOAuthState(req.query.state);
+  const [states] = await db.execute(
+    'SELECT user_id FROM google_oauth_states WHERE state_hash=? AND user_id=? AND expires_at>NOW() LIMIT 1',
+    [stateHash, req.user.id],
+  );
+  if (!states.length) return redirect('error', 'The Google authorization request expired. Please try again.');
+  await db.execute('DELETE FROM google_oauth_states WHERE state_hash=?', [stateHash]);
+  if (typeof req.query.error === 'string') return redirect('error', 'Google authorization was cancelled.');
+  if (typeof req.query.code !== 'string') return redirect('error', 'The Google authorization response was invalid.');
+  try {
+    const tokens = await exchangeAuthorizationCode(req.query.code);
+    if (!tokens.refresh_token) return redirect('error', 'Google did not return offline access. Disconnect access in Google and try again.');
+    const email = await getGoogleAccountEmail(tokens.refresh_token);
+    if (!email) return redirect('error', 'Could not read the connected Google account email.');
+    await db.execute(
+      `INSERT INTO google_calendar_connections(id,email,refresh_token_encrypted,scope,connected_by)
+       VALUES(1,?,?,?,?) ON DUPLICATE KEY UPDATE email=VALUES(email),refresh_token_encrypted=VALUES(refresh_token_encrypted),scope=VALUES(scope),connected_by=VALUES(connected_by),connected_at=CURRENT_TIMESTAMP`,
+      [email, encryptToken(tokens.refresh_token), tokens.scope || '', req.user.id],
+    );
+    return redirect('connected', `Connected ${email}.`);
+  } catch (error) {
+    console.error('Google OAuth callback error:', error);
+    return redirect(
+      'error',
+      error.expose ? error.message : 'Google Calendar could not be connected.',
+    );
+  }
+}));
+
+app.post('/api/integrations/google/disconnect', asyncRoute(async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+  const [rows] = await db.query('SELECT refresh_token_encrypted FROM google_calendar_connections WHERE id=1 LIMIT 1');
+  if (rows.length) {
+    const refreshToken = decryptToken(rows[0].refresh_token_encrypted);
+    await revokeGoogleToken(refreshToken).catch(error => console.warn('Google token revocation note:', error.message));
+    await db.execute('DELETE FROM google_calendar_connections WHERE id=1');
+  }
+  res.sendStatus(204);
+}));
+
+app.get('/api/meetings', asyncRoute(async (_req, res) => {
+  const [rows] = await db.query('SELECT * FROM meetings ORDER BY start_at ASC LIMIT 2000');
+  res.json({ data: rows.map(publicMeeting) });
+}));
+
+app.post('/api/meetings', asyncRoute(async (req, res) => {
+  const meeting = validateMeetingInput(req.body);
+  const idempotencyKey = String(req.headers['idempotency-key'] || '').trim();
+  if (idempotencyKey && (idempotencyKey.length > 100 || !/^[\w.-]+$/.test(idempotencyKey)))
+    return res.status(400).json({ error: 'Invalid idempotency key.' });
+  if (idempotencyKey) {
+    const [existing] = await db.execute('SELECT * FROM meetings WHERE idempotency_key=? LIMIT 1', [idempotencyKey]);
+    if (existing.length) return res.json({ data: publicMeeting(existing[0]) });
+  }
+  const { refreshToken } = await googleConnection();
+  const googleEventId = randomBytes(16).toString('hex');
+  const event = await createCalendarMeeting(refreshToken, meeting, googleEventId);
+  try {
+    const [result] = await db.execute(
+      `INSERT INTO meetings(google_event_id,title,description,start_at,end_at,time_zone,attendee_emails,meet_url,calendar_url,status,created_by,idempotency_key)
+       VALUES(?,?,?,?,?,?,?,?,?,'scheduled',?,?)`,
+      [event.id, meeting.title, meeting.description, meeting.start_at, meeting.end_at, meeting.time_zone, JSON.stringify(meeting.attendee_emails), meetLinkFromEvent(event), event.htmlLink || '', req.user.id, idempotencyKey || null],
+    );
+    const [rows] = await db.execute('SELECT * FROM meetings WHERE id=?', [result.insertId]);
+    res.status(201).json({ data: publicMeeting(rows[0]) });
+  } catch (error) {
+    await cancelCalendarMeeting(refreshToken, event.id).catch(() => {});
+    throw error;
+  }
+}));
+
+app.patch('/api/meetings/:id', asyncRoute(async (req, res) => {
+  if (!/^[1-9]\d*$/.test(req.params.id)) return res.status(400).json({ error: 'Invalid meeting ID.' });
+  const [rows] = await db.execute('SELECT * FROM meetings WHERE id=? LIMIT 1', [req.params.id]);
+  if (!rows.length) return res.status(404).json({ error: 'Meeting not found.' });
+  if (rows[0].status === 'cancelled') return res.status(409).json({ error: 'A cancelled meeting cannot be changed.' });
+  const merged = {
+    title: req.body?.title ?? rows[0].title,
+    description: req.body?.description ?? rows[0].description,
+    start_at: req.body?.start_at ?? rows[0].start_at,
+    end_at: req.body?.end_at ?? rows[0].end_at,
+    time_zone: req.body?.time_zone ?? rows[0].time_zone,
+    attendee_emails: req.body?.attendee_emails ?? (typeof rows[0].attendee_emails === 'string' ? JSON.parse(rows[0].attendee_emails) : rows[0].attendee_emails),
+  };
+  const meeting = validateMeetingInput(merged);
+  const { refreshToken } = await googleConnection();
+  const event = await updateCalendarMeeting(refreshToken, rows[0].google_event_id, meeting);
+  await db.execute(
+    'UPDATE meetings SET title=?,description=?,start_at=?,end_at=?,time_zone=?,attendee_emails=?,meet_url=?,calendar_url=? WHERE id=?',
+    [meeting.title, meeting.description, meeting.start_at, meeting.end_at, meeting.time_zone, JSON.stringify(meeting.attendee_emails), meetLinkFromEvent(event) || rows[0].meet_url, event.htmlLink || rows[0].calendar_url, req.params.id],
+  );
+  const [updated] = await db.execute('SELECT * FROM meetings WHERE id=?', [req.params.id]);
+  res.json({ data: publicMeeting(updated[0]) });
+}));
+
+app.delete('/api/meetings/:id', asyncRoute(async (req, res) => {
+  if (!/^[1-9]\d*$/.test(req.params.id)) return res.status(400).json({ error: 'Invalid meeting ID.' });
+  const [rows] = await db.execute('SELECT * FROM meetings WHERE id=? LIMIT 1', [req.params.id]);
+  if (!rows.length) return res.status(404).json({ error: 'Meeting not found.' });
+  if (rows[0].status !== 'cancelled') {
+    const { refreshToken } = await googleConnection();
+    await cancelCalendarMeeting(refreshToken, rows[0].google_event_id);
+    await db.execute("UPDATE meetings SET status='cancelled',cancelled_at=NOW() WHERE id=?", [req.params.id]);
+  }
+  res.sendStatus(204);
+}));
+
 // ── Bootstrap (Parallelized for sub-second performance) ───────
 const publicUsers = 'id,name,email,role,job_title,status,phone,IF(password_hash IS NULL,0,1) AS has_login,created_at,updated_at';
 app.get('/api/bootstrap', asyncRoute(async (req, res) => {
@@ -360,8 +528,9 @@ app.use((error, _req, res, _next) => {
   if (code === 'ER_NO_REFERENCED_ROW_2' || code === 'ER_ROW_IS_REFERENCED_2')
     return res.status(409).json({ error: 'Check the linked client, project, or team member.' });
 
-  // M-3: For intentional user-facing errors (4xx), return the message safely
-  if (error.status && error.status >= 400 && error.status < 500) {
+  // M-3: Return only intentional user-facing errors. Known operational 5xx
+  // errors must opt in with `expose`; unexpected infrastructure details stay hidden.
+  if (error.status && ((error.status >= 400 && error.status < 500) || error.expose === true)) {
     return res.status(error.status).json({ error: error.message });
   }
 

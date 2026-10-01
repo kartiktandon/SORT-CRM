@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -14,6 +14,8 @@ import {
   FileCheck2,
   LayoutGrid,
   List,
+  CalendarPlus,
+  Video,
   Plus,
   Printer,
   RotateCcw,
@@ -50,6 +52,7 @@ import LeadsExplorer from './leads';
 import DraggableWidgetGridDemo, {
   type DashboardMetrics,
 } from '@/components/ui/draggable-widget-grid-demo';
+import { api } from '@/lib/api';
 
 type Row = ReactNode[];
 const today = () => new Date().toLocaleDateString('en-CA');
@@ -2167,11 +2170,112 @@ ${form.footerText}
 function TeamView() {
   return <ResourceView resource="users" />;
 }
+type Meeting = {
+  id: number;
+  title: string;
+  description: string;
+  start_at: string;
+  end_at: string;
+  time_zone: string;
+  attendee_emails: string[];
+  meet_url: string;
+  calendar_url: string;
+  status: 'scheduled' | 'cancelled';
+};
+
+function localDateTime(date: Date) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+function localDateKey(value: string) {
+  return localDateTime(new Date(value)).slice(0, 10);
+}
+
+function MeetingEditor({ meeting, onClose, onSaved }: {
+  meeting?: Meeting;
+  onClose: () => void;
+  onSaved: (meeting: Meeting) => void;
+}) {
+  const fieldId = useId();
+  const [defaults] = useState(() => {
+    const start = new Date();
+    start.setHours(start.getHours() + 1, 0, 0, 0);
+    return { start: localDateTime(start), end: localDateTime(new Date(start.getTime() + 30 * 60 * 1000)) };
+  });
+  const [title, setTitle] = useState(meeting?.title || 'Client meeting');
+  const [description, setDescription] = useState(meeting?.description || '');
+  const [startAt, setStartAt] = useState(meeting ? localDateTime(new Date(meeting.start_at)) : defaults.start);
+  const [endAt, setEndAt] = useState(meeting ? localDateTime(new Date(meeting.end_at)) : defaults.end);
+  const [attendees, setAttendees] = useState(meeting?.attendee_emails.join(', ') || '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open && !saving) onClose(); }}>
+      <DialogContent className="ws-dialog">
+        <DialogTitle>{meeting ? 'Reschedule meeting' : 'Book Google Meet'}</DialogTitle>
+        <DialogDescription>
+          Google Calendar will email a native invitation to every attendee.
+        </DialogDescription>
+        <form onSubmit={async (event) => {
+          event.preventDefault();
+          setSaving(true);
+          setError('');
+          try {
+            const body = {
+              title,
+              description,
+              start_at: new Date(startAt).toISOString(),
+              end_at: new Date(endAt).toISOString(),
+              time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+              attendee_emails: attendees.split(/[;,\n]/).map(value => value.trim()).filter(Boolean),
+            };
+            const result = await api<{ data: Meeting }>(`/meetings${meeting ? `/${meeting.id}` : ''}`, {
+              method: meeting ? 'PATCH' : 'POST',
+              headers: meeting ? undefined : { 'Idempotency-Key': crypto.randomUUID() },
+              body: JSON.stringify(body),
+            });
+            onSaved(result.data);
+          } catch (error) {
+            setError(error instanceof Error ? error.message : 'Meeting could not be saved.');
+          } finally {
+            setSaving(false);
+          }
+        }}>
+          <label htmlFor={`${fieldId}-title`}>Title<Input id={`${fieldId}-title`} required maxLength={180} value={title} onChange={event => setTitle(event.target.value)} /></label>
+          <div className="ws-meeting-times">
+            <label htmlFor={`${fieldId}-start`}>Starts<Input id={`${fieldId}-start`} type="datetime-local" required value={startAt} onChange={event => setStartAt(event.target.value)} /></label>
+            <label htmlFor={`${fieldId}-end`}>Ends<Input id={`${fieldId}-end`} type="datetime-local" required value={endAt} onChange={event => setEndAt(event.target.value)} /></label>
+          </div>
+          <label htmlFor={`${fieldId}-attendees`}>Attendee emails<Input id={`${fieldId}-attendees`} type="text" required placeholder="customer@example.com, teammate@example.com" value={attendees} onChange={event => setAttendees(event.target.value)} /></label>
+          <label htmlFor={`${fieldId}-description`}>Description<Textarea id={`${fieldId}-description`} rows={4} value={description} onChange={event => setDescription(event.target.value)} /></label>
+          {error && <p className="ws-form-error" role="alert">{error}</p>}
+          <div className="ws-actions">
+            <Action secondary onClick={onClose}>Cancel</Action>
+            <Action type="submit">{saving ? 'Saving…' : meeting ? 'Send update' : 'Book & send invites'}</Action>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function TasksView({ calendar }: { calendar: boolean }) {
   const { user, save, busy } = useCrm();
   const tasks = useRecords('tasks');
   const [tab, setTab] = useState(calendar ? 'Calendar' : 'My Tasks');
   const [offset, setOffset] = useState(0);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [meetingDraft, setMeetingDraft] = useState<Meeting | null | undefined>(undefined);
+  const [meetingError, setMeetingError] = useState('');
+  useEffect(() => {
+    if (tab !== 'Calendar') return;
+    let active = true;
+    api<{ data: Meeting[] }>('/meetings')
+      .then(result => { if (active) setMeetings(result.data); })
+      .catch(error => { if (active) setMeetingError(error instanceof Error ? error.message : 'Meetings could not be loaded.'); });
+    return () => { active = false; };
+  }, [tab]);
   const now = new Date();
   const month = new Date(now.getFullYear(), now.getMonth() + offset, 1);
   const firstDay = (month.getDay() + 6) % 7;
@@ -2242,6 +2346,9 @@ function TasksView({ calendar }: { calendar: boolean }) {
               })}
             </h4>
             <div className="ws-actions">
+              <Action onClick={() => setMeetingDraft(null)}>
+                <CalendarPlus size={14} /> Book meeting
+              </Action>
               <button
                 aria-label="Previous month"
                 onClick={() => setOffset(offset - 1)}
@@ -2276,11 +2383,51 @@ function TasksView({ calendar }: { calendar: boolean }) {
                         {text(row, 'title')}
                       </button>
                     ))}
+                  {meetings
+                    .filter(meeting => meeting.status === 'scheduled' && localDateKey(meeting.start_at) === date)
+                    .map(meeting => (
+                      <button key={`meeting-${meeting.id}`} className="ws-meeting-event" onClick={() => setMeetingDraft(meeting)}>
+                        <Video size={11} /> {new Date(meeting.start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} {meeting.title}
+                      </button>
+                    ))}
                 </div>
               );
             })}
           </div>
+          {meetingError && <p className="ws-form-error" role="alert">{meetingError}</p>}
+          <div className="ws-meeting-list">
+            <h4>Upcoming meetings</h4>
+            {meetings.filter(meeting => meeting.status === 'scheduled' && new Date(meeting.end_at) >= new Date()).map(meeting => (
+              <article key={meeting.id}>
+                <div><strong>{meeting.title}</strong><small>{new Date(meeting.start_at).toLocaleString()} · {meeting.attendee_emails.join(', ')}</small></div>
+                <span className="ws-actions">
+                  {meeting.meet_url && <a className="ws-link" href={meeting.meet_url} target="_blank" rel="noreferrer">Join Meet</a>}
+                  <button className="ws-link" onClick={() => setMeetingDraft(meeting)}>Reschedule</button>
+                  <button className="ws-link danger" onClick={async () => {
+                    if (!window.confirm('Cancel this meeting and email all attendees?')) return;
+                    try {
+                      await api(`/meetings/${meeting.id}`, { method: 'DELETE' });
+                      setMeetings(current => current.map(row => row.id === meeting.id ? { ...row, status: 'cancelled' } : row));
+                    } catch (error) {
+                      setMeetingError(error instanceof Error ? error.message : 'Meeting could not be cancelled.');
+                    }
+                  }}>Cancel</button>
+                </span>
+              </article>
+            ))}
+            {!meetings.some(meeting => meeting.status === 'scheduled' && new Date(meeting.end_at) >= new Date()) && <p className="ws-empty">No upcoming meetings.</p>}
+          </div>
         </section>
+      )}
+      {meetingDraft !== undefined && (
+        <MeetingEditor
+          meeting={meetingDraft || undefined}
+          onClose={() => setMeetingDraft(undefined)}
+          onSaved={saved => {
+            setMeetings(current => current.some(row => row.id === saved.id) ? current.map(row => row.id === saved.id ? saved : row) : [...current, saved]);
+            setMeetingDraft(undefined);
+          }}
+        />
       )}
     </>
   );
@@ -2348,6 +2495,22 @@ function SettingsView() {
   const [testBusy, setTestBusy] = useState(false);
   const current = (data.documents.settings?.value || {}) as { name?: string };
   const [name, setName] = useState(current.name || '');
+  const [googleStatus, setGoogleStatus] = useState<{ connected: boolean; account: { email: string } | null } | null>(null);
+  const [googleBusy, setGoogleBusy] = useState(false);
+  const [googleMessage, setGoogleMessage] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    return new URLSearchParams(window.location.search).get('message') || '';
+  });
+
+  useEffect(() => {
+    if (tab !== 'Integrations') return;
+    if (new URLSearchParams(window.location.search).has('google')) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    api<{ connected: boolean; account: { email: string } | null }>('/integrations/google/status')
+      .then(setGoogleStatus)
+      .catch(error => setGoogleMessage(error instanceof Error ? error.message : 'Google status unavailable.'));
+  }, [tab]);
 
   const webhookUrl =
     typeof window !== 'undefined'
@@ -2357,7 +2520,7 @@ function SettingsView() {
 
   const copyToClipboard = (text: string, key: string) => {
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(text);
+      void navigator.clipboard.writeText(text);
     }
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2500);
@@ -2404,6 +2567,41 @@ function SettingsView() {
       />
       {tab === 'Integrations' ? (
         <div className="ws-integrations-container">
+          <Panel title="Google Calendar & Meet">
+            <div className="ws-google-integration">
+              <div>
+                <strong>{googleStatus?.connected ? `Connected as ${googleStatus.account?.email}` : 'Company calendar not connected'}</strong>
+                <p>Book meetings from the CRM calendar. Google sends native invitations and creates a Meet link.</p>
+              </div>
+              {user.role === 'admin' ? (
+                googleStatus?.connected ? (
+                  <Action secondary onClick={async () => {
+                    if (!window.confirm('Disconnect the company Google Calendar account? Existing meetings will remain in Google Calendar.')) return;
+                    setGoogleBusy(true);
+                    try {
+                      await api('/integrations/google/disconnect', { method: 'POST' });
+                      setGoogleStatus({ connected: false, account: null });
+                      setGoogleMessage('Google Calendar disconnected.');
+                    } catch (error) {
+                      setGoogleMessage(error instanceof Error ? error.message : 'Disconnect failed.');
+                    } finally { setGoogleBusy(false); }
+                  }}>{googleBusy ? 'Disconnecting…' : 'Disconnect'}</Action>
+                ) : (
+                  <Action onClick={async () => {
+                    setGoogleBusy(true);
+                    try {
+                      const result = await api<{ url: string }>('/integrations/google/connect', { method: 'POST' });
+                      window.location.assign(result.url);
+                    } catch (error) {
+                      setGoogleMessage(error instanceof Error ? error.message : 'Connection failed.');
+                      setGoogleBusy(false);
+                    }
+                  }}>{googleBusy ? 'Opening Google…' : 'Connect Google account'}</Action>
+                )
+              ) : <span className="ws-hint">An administrator manages this connection.</span>}
+            </div>
+            {googleMessage && <p className="ws-hint">{googleMessage}</p>}
+          </Panel>
           <Panel title="Meta (Facebook & Instagram) Lead Ads Webhook">
             <div className="ws-meta-integration-card">
               <div className="ws-meta-status-banner">

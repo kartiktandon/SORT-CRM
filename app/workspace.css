@@ -1760,6 +1760,27 @@
 .ws-content .ws-calendar-grid button:hover {
   background: #ddd6fe;
 }
+.ws-content .ws-calendar-grid .ws-meeting-event {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  background: #dcfce7;
+  color: #166534;
+}
+.ws-content .ws-calendar-grid .ws-meeting-event:hover { background: #bbf7d0; }
+.ws-content .ws-meeting-list { margin-top: 22px; border-top: 1px solid var(--ws-border); padding-top: 18px; }
+.ws-content .ws-meeting-list > h4 { margin: 0 0 10px; font-size: 13px; }
+.ws-content .ws-meeting-list article { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--ws-border-light); }
+.ws-content .ws-meeting-list article strong,
+.ws-content .ws-meeting-list article small { display: block; }
+.ws-content .ws-meeting-list article small { color: var(--ws-muted); font-size: 10px; margin-top: 4px; }
+.ws-dialog .ws-meeting-times { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ws-dialog form label { display: grid; gap: 6px; font-size: 11.5px; font-weight: 600; }
+.ws-content .ws-form-error,
+.ws-dialog .ws-form-error { color: #b91c1c; background: #fef2f2; border-radius: 8px; padding: 9px 11px; }
+.ws-content .ws-google-integration { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.ws-content .ws-google-integration strong { font-size: 13px; }
+.ws-content .ws-google-integration p { margin: 5px 0 0; color: var(--ws-muted); font-size: 11px; }
 
 /* ── Assets & Folders ────────────────────────────────────── */
 .ws-content .ws-assets {
