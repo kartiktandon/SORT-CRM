@@ -1,4 +1,6 @@
-api/.mysql/
+# The root Vercel project is the static frontend. Exclude the separately
+# deployed Express backend so its files are not detected as Vercel Functions.
+api/
 .env*
 .git/
 node_modules/
