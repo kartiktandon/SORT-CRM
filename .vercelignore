@@ -1,6 +1,6 @@
-# The root Vercel project is the static frontend. Exclude the separately
-# deployed Express backend so its files are not detected as Vercel Functions.
-api/
+# The frontend build only publishes dist/client. Keep the backend source in the
+# deployment upload because a second Vercel project uses api/ as its Root
+# Directory. The frontend project will not publish these source files.
 .env*
 .git/
 node_modules/
