@@ -7,6 +7,7 @@ import { db } from './db.js';
 import { hashPassword, verifyPassword, tokenHash, readSession } from './security.js';
 import { resources, validate } from './resources.js';
 import { verifyWebhook, handleWebhook, handleTestLead, getMetaStatus } from './meta.js';
+import { createAllowedOrigins, isOriginAllowed } from './origins.js';
 import {
   authorizationUrl,
   cancelCalendarMeeting,
@@ -49,16 +50,9 @@ app.use(helmet({
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 
-// H-2: Exact-match CORS — explicitly allow production domains + any configured in FRONTEND_ORIGIN
-const allowedOrigins = new Set([
-  'https://crm.buildwithnovera.com',
-  'https://buildwithnovera.com',
-  'https://novera-crm-backend.vercel.app',
-  ...(process.env.FRONTEND_ORIGIN || 'http://localhost:3000')
-    .split(',')
-    .map(o => o.trim().replace(/\/+$/, ''))
-    .filter(Boolean)
-]);
+// H-2: Canonical exact-match CORS — explicitly allow production domains plus
+// comma-separated origins configured through FRONTEND_ORIGIN.
+const allowedOrigins = createAllowedOrigins();
 // Dev-only: allow localhost variants
 if (process.env.NODE_ENV !== 'production') {
   allowedOrigins.add('http://localhost:3000');
@@ -68,7 +62,7 @@ if (process.env.NODE_ENV !== 'production') {
 app.use(cors({
   origin: (origin, callback) => {
     // Allow server-to-server requests (no Origin header)
-    if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+    if (isOriginAllowed(origin, allowedOrigins)) return callback(null, true);
     return callback(null, false);
   },
   credentials: true,
@@ -98,7 +92,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use((req, res, next) => {
   res.set('Cache-Control', 'no-store');
   // Secondary CORS enforcement for state-changing non-webhook requests
-  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !req.path.startsWith('/api/webhooks') && req.headers.origin && !allowedOrigins.has(req.headers.origin)) {
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !req.path.startsWith('/api/webhooks') && !isOriginAllowed(req.headers.origin, allowedOrigins)) {
     return res.status(403).json({ error: 'Origin not allowed.' });
   }
   next();
