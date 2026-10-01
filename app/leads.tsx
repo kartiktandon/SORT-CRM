@@ -133,6 +133,8 @@ const stageColors: Record<string, string> = {
   Lost: '#6486ac',
 };
 const platforms = ['Facebook', 'Instagram', 'Website'];
+const platformLabel = (platform: string) =>
+  platform === 'Facebook' ? 'Meta' : platform;
 
 const leadInitials = (name: string) =>
   name
@@ -428,9 +430,7 @@ export default function LeadsExplorer() {
       <Camera size={11} />
     ) : value === 'Website' ? (
       <Globe size={11} />
-    ) : (
-      <span aria-hidden="true">f</span>
-    );
+    ) : null;
   const stageBadge = (lead: Lead) => {
     const color = stageColors[lead.stage] || '#6366f1';
     return (
@@ -823,7 +823,7 @@ export default function LeadsExplorer() {
                   setPage(1);
                 }}
               >
-                <span>{item}</span>
+                <span>{platformLabel(item)}</span>
                 <div>
                   <i
                     style={{
@@ -1062,7 +1062,7 @@ export default function LeadsExplorer() {
                         className={`lx-platform platform-${lead.platform.toLowerCase()}`}
                       >
                         {platformMark(lead.platform)}
-                        {lead.platform}
+                        {platformLabel(lead.platform)}
                       </span>
                       {lead.temperature === 'Hot' && (
                         <span className="lx-tag-priority priority-hot">Hot</span>
@@ -1133,7 +1133,7 @@ export default function LeadsExplorer() {
                   </div>
                   <div>
                     <dt>Source</dt>
-                    <dd>{lead.platform}</dd>
+                    <dd>{platformLabel(lead.platform)}</dd>
                   </div>
                   <div>
                     <dt>Stage</dt>
@@ -1271,7 +1271,7 @@ export default function LeadsExplorer() {
                       className={`lx-platform platform-${lead.platform.toLowerCase()}`}
                     >
                       {platformMark(lead.platform)}
-                      {lead.platform}
+                      {platformLabel(lead.platform)}
                     </span>
                   </td>
                   <td>{lead.company}</td>
