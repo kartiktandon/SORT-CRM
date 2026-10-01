@@ -125,6 +125,12 @@ const getCookieOptions = (req) => {
   };
 };
 
+// This route intentionally does not query MySQL. It confirms that Vercel loaded
+// the Express function; /api/health below separately verifies the database.
+app.get('/', (_req, res) => {
+  res.json({ ok: true, service: 'novera-crm-api' });
+});
+
 const initExpensesTable = async () => {
   try {
     await db.query(`
@@ -166,7 +172,9 @@ app.get('/api/webhooks/facebook', verifyWebhook);
 app.post('/api/webhooks/facebook', asyncRoute(handleWebhook));
 
 // ── Login with rate limiting ────────────────────────────────
-const dummyHash = await hashPassword(randomBytes(24).toString('hex'));
+// A well-formed fixed hash keeps unknown-user password checks timing-compatible
+// without delaying every serverless cold start with module-level async work.
+const dummyHash = `${'0'.repeat(32)}:${'0'.repeat(128)}`;
 
 // H-3: Use express-rate-limit (trust proxy set above makes req.ip accurate)
 const loginLimiter = rateLimit({
