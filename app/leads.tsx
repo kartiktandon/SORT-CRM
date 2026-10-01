@@ -99,14 +99,19 @@ const legacyServiceFromNotes = (notes: string) => {
 };
 const noteDateTime = (value: string) => {
   if (!value) return 'Time unavailable';
-  const date = new Date(value);
+  const mysqlTimestamp = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/;
+  const date = new Date(
+    mysqlTimestamp.test(value) ? `${value.replace(' ', 'T')}Z` : value,
+  );
   if (!Number.isFinite(date.getTime())) return 'Time unavailable';
   return date.toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
     day: '2-digit',
     month: 'short',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    timeZoneName: 'short',
   });
 };
 const stageNames = [
@@ -530,6 +535,7 @@ export default function LeadsExplorer() {
     value: string,
     options: string[],
     change: (value: string) => void,
+    optionLabel: (option: string) => string = (option) => option,
   ) => (
     <select
       className="lx-field-select"
@@ -539,7 +545,7 @@ export default function LeadsExplorer() {
     >
       {options.map((option) => (
         <option key={option} value={option}>
-          {option}
+          {optionLabel(option)}
         </option>
       ))}
     </select>
@@ -1508,6 +1514,7 @@ export default function LeadsExplorer() {
                             platform: value,
                             source: value,
                           }),
+                        (option) => (option === 'Facebook' ? 'Meta' : option),
                       )}
                     </div>
 
