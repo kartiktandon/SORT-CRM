@@ -540,6 +540,196 @@ button {
   gap: 12px;
 }
 
+.notification-center {
+  position: relative;
+}
+
+.notification-bell {
+  position: relative;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #ffffff;
+  color: #475569;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.15s ease;
+}
+
+.notification-bell:hover,
+.notification-bell[aria-expanded='true'] {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+  color: var(--violet);
+}
+
+.notification-bell:focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
+}
+
+.notification-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: grid;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  place-items: center;
+  border: 2px solid #ffffff;
+  border-radius: 99px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.notification-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(380px, calc(100vw - 24px));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: var(--shadow-xl);
+  animation: notification-panel-in 0.16s ease-out;
+}
+
+@keyframes notification-panel-in {
+  from { opacity: 0; transform: translateY(-5px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.notification-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line-light);
+}
+
+.notification-panel > header strong,
+.notification-panel > header span {
+  display: block;
+}
+
+.notification-panel > header strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.notification-panel > header span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.notification-panel > header b {
+  padding: 4px 8px;
+  border-radius: 99px;
+  background: #fff1f2;
+  color: #e11d48;
+  font-size: 9px;
+}
+
+.notification-list {
+  max-height: min(420px, calc(100vh - 110px));
+  overflow-y: auto;
+}
+
+.notification-item {
+  display: flex;
+  width: 100%;
+  gap: 12px;
+  padding: 14px 18px;
+  border: 0;
+  border-bottom: 1px solid var(--line-light);
+  background: #ffffff;
+  color: inherit;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.notification-item:last-child {
+  border-bottom: 0;
+}
+
+.notification-item:hover {
+  background: #f8fafc;
+}
+
+.notification-item-icon {
+  display: grid;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 10px;
+  background: #eef2ff;
+  color: var(--violet);
+}
+
+.notification-item > span:last-child {
+  min-width: 0;
+}
+
+.notification-item strong,
+.notification-item small {
+  display: block;
+}
+
+.notification-item strong {
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.notification-item small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.notification-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 30px 20px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.notification-empty > span {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 10px;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--bg-subtle);
+  color: var(--muted-light);
+}
+
+.notification-empty strong {
+  color: var(--ink-secondary);
+  font-size: 12px;
+}
+
+.notification-empty small {
+  max-width: 250px;
+  margin-top: 4px;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
 .ws-link {
   display: inline-flex;
   align-items: center;
@@ -1594,6 +1784,23 @@ button {
 }
 
 @media (max-width: 480px) {
+  .topbar {
+    gap: 8px;
+    padding: 0 10px;
+  }
+  .topbar-actions {
+    gap: 7px;
+  }
+  .topbar-actions > .ws-link {
+    display: none;
+  }
+  .notification-panel {
+    position: fixed;
+    top: 68px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+  }
   .kpi-grid {
     grid-template-columns: 1fr;
   }
