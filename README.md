@@ -66,6 +66,9 @@ Import this repository as `novera-crm-frontend` with root directory `./`.
 Use the Other preset; `vercel.json` sets build command `npm run build:vercel`,
 install command `npm ci`, output directory `dist/client`, and clean URLs.
 Remove conflicting dashboard overrides. Do not add MySQL credentials to the frontend.
+The root `.vercelignore` excludes `api/` from this frontend deployment so Vercel
+does not misclassify backend source files as frontend Serverless Functions. Deploy
+the backend as a separate project whose Root Directory is `api/`.
 
 The current deployment configuration builds static frontend assets only. Before
 deploying, deploy the Express backend separately and configure a same-origin `/api`

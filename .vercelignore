@@ -1,6 +1,13 @@
-# The frontend build only publishes dist/client. Keep the backend source in the
-# deployment upload because a second Vercel project uses api/ as its Root
-# Directory. The frontend project will not publish these source files.
+# This file configures the repository-root FRONTEND project only. Exclude the
+# separate Express backend completely: Vercel treats source files under a
+# repository-root `api/` directory as Functions, even though this project's
+# build output is static. Including them can exceed the Hobby function limit.
+#
+# The backend Vercel project has `api/` configured as its Root Directory and
+# uses api/vercel.json, so this root-level ignore rule does not remove its files
+# from backend deployments.
+api/
+
 .env*
 .git/
 node_modules/
