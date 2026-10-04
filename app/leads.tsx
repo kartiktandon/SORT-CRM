@@ -457,12 +457,13 @@ export default function LeadsExplorer() {
       action: reset,
     },
     {
-      label: "Today's Leads",
-      value: count((lead) => isInDateRange(lead, 'Today')),
-      icon: CalendarDays,
+      label: 'Contacted Leads',
+      value: count((lead) => lead.stage === 'Contacted'),
+      icon: Phone,
       tone: 'blue',
+      selected: stage === 'Contacted',
       action: () => {
-        setDateRange('Today');
+        setStage('Contacted');
         setPage(1);
       },
     },
