@@ -131,7 +131,11 @@ function Revenue({ data }: { data: DashboardMetrics['revenue'] }) {
         <AreaChart data={data} margin={{ top: 12, right: 4, bottom: 0, left: -22 }}>
           <CartesianGrid vertical={false} stroke="#e2e8f0" />
           <XAxis dataKey="month" tickLine={false} axisLine={false} />
-          <YAxis tickFormatter={(value) => `$${Math.round(value / 1000)}k`} tickLine={false} axisLine={false} />
+          <YAxis
+            tickFormatter={(value) => `₹${Math.round(value / 1000)}k`}
+            tickLine={false}
+            axisLine={false}
+          />
           <ChartTooltip content={<ChartTooltipContent />} />
           <Area dataKey="amount" stroke="#6366f1" fill="#c7d2fe" fillOpacity={0.65} isAnimationActive={false} />
           <Area dataKey="expenses" stroke="#f43f5e" fill="#ffe4e6" fillOpacity={0.5} isAnimationActive={false} />

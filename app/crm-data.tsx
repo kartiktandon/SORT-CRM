@@ -4,6 +4,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -43,6 +44,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<{ data: Data; user: User } | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const refreshRequest = useRef<Promise<void> | null>(null);
   const router = useRouter();
   const handleError = useCallback(
     (error: unknown) => {
@@ -58,18 +60,25 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     [router],
   );
   const refresh = useCallback(async () => {
-    try {
-      const result = await api<{ data: Data; user: User }>('/bootstrap');
-      setState(result);
-      if (typeof window !== 'undefined') {
-        try {
-          sessionStorage.setItem('novera_crm_cache', JSON.stringify(result));
-        } catch {}
+    if (refreshRequest.current) return refreshRequest.current;
+    const request = (async () => {
+      try {
+        const result = await api<{ data: Data; user: User }>('/bootstrap');
+        setState(result);
+        if (typeof window !== 'undefined') {
+          try {
+            sessionStorage.setItem('novera_crm_cache', JSON.stringify(result));
+          } catch {}
+        }
+        setError('');
+      } catch (error) {
+        handleError(error);
+      } finally {
+        refreshRequest.current = null;
       }
-      setError('');
-    } catch (error) {
-      handleError(error);
-    }
+    })();
+    refreshRequest.current = request;
+    return request;
   }, [handleError]);
   useEffect(() => {
     let active = true;

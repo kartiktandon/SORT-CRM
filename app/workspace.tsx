@@ -811,7 +811,7 @@ export default function WorkspaceContent({
 }
 
 function Dashboard({ navigate }: { navigate: (value: string) => void }) {
-  const { user } = useCrm();
+  const { user, refresh } = useCrm();
   const leads = useRecords('leads'),
     clients = useRecords('clients'),
     projects = useRecords('projects'),
@@ -819,6 +819,19 @@ function Dashboard({ navigate }: { navigate: (value: string) => void }) {
     invoices = useRecords('invoices'),
     expenses = useRecords('expenses'),
     tasks = useRecords('tasks');
+  useEffect(() => {
+    const sync = () => {
+      if (document.visibilityState === 'visible') void refresh();
+    };
+    const timer = window.setInterval(sync, 15_000);
+    window.addEventListener('focus', sync);
+    document.addEventListener('visibilitychange', sync);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', sync);
+      document.removeEventListener('visibilitychange', sync);
+    };
+  }, [refresh]);
   const now = new Date();
   const monthKey = now.toISOString().slice(0, 7);
   const paid = invoices.filter((row) => row.status === 'Paid');
