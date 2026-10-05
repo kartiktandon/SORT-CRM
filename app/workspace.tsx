@@ -810,6 +810,28 @@ export default function WorkspaceContent({
   );
 }
 
+const parseAmount = (val: unknown): number => {
+  if (typeof val === 'number') return Number.isFinite(val) ? val : 0;
+  if (!val) return 0;
+  const cleaned = String(val).replace(/[^0-9.-]+/g, '');
+  const num = parseFloat(cleaned);
+  return Number.isFinite(num) ? num : 0;
+};
+
+const extractMonthKey = (dateVal: unknown, createdAtVal?: unknown): string => {
+  const str = String(dateVal || createdAtVal || '').trim();
+  if (!str) return '';
+  const match = str.match(/^(\d{4})[-/](\d{1,2})/);
+  if (match) return `${match[1]}-${match[2].padStart(2, '0')}`;
+  const dmyMatch = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if (dmyMatch) return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}`;
+  const parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) {
+    return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}`;
+  }
+  return '';
+};
+
 function Dashboard({ navigate }: { navigate: (value: string) => void }) {
   const { user, refresh } = useCrm();
   const leads = useRecords('leads'),
@@ -833,10 +855,12 @@ function Dashboard({ navigate }: { navigate: (value: string) => void }) {
     };
   }, [refresh]);
   const now = new Date();
-  const monthKey = now.toISOString().slice(0, 7);
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const paid = invoices.filter((row) => row.status === 'Paid');
+
   const total = (rows: RecordData[]) =>
-    rows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+    rows.reduce((sum, row) => sum + parseAmount(row.amount), 0);
+
   const revenue = Array.from({ length: 6 }, (_, i) => {
     const date = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
     const key =
@@ -844,13 +868,14 @@ function Dashboard({ navigate }: { navigate: (value: string) => void }) {
     return {
       month: date.toLocaleDateString('en', { month: 'short', year: '2-digit' }),
       amount: total(
-        paid.filter((row) => String(row.issue_date || '').startsWith(key)),
+        paid.filter((row) => extractMonthKey(row.issue_date, row.created_at) === key),
       ),
       expenses: total(
-        expenses.filter((row) => String(row.date || '').startsWith(key)),
+        expenses.filter((row) => extractMonthKey(row.date, row.created_at) === key),
       ),
     };
   });
+
   const due = tasks
     .filter((row) => {
       const date = String(row.due_date || '').slice(0, 10);
@@ -862,17 +887,54 @@ function Dashboard({ navigate }: { navigate: (value: string) => void }) {
       );
     })
     .sort((a, b) => String(a.due_date).localeCompare(String(b.due_date)));
+
+  const paidThisMonth = total(
+    paid.filter((row) => extractMonthKey(row.issue_date, row.created_at) === currentMonthKey),
+  );
+
+  const thisMonthExpenses = total(
+    expenses.filter((row) => extractMonthKey(row.date, row.created_at) === currentMonthKey),
+  );
+
+  const allExpensesTotal = total(expenses);
+
+  const expenseMonths = Array.from(
+    new Set(expenses.map((row) => extractMonthKey(row.date, row.created_at)).filter(Boolean)),
+  )
+    .sort()
+    .reverse();
+
+  let finalExpensesValue = thisMonthExpenses;
+  let finalExpensesTitle = 'Monthly expenses';
+  let finalExpensesDetail = `${money(paidThisMonth)} collected this month`;
+
+  if (thisMonthExpenses === 0 && expenses.length > 0 && expenseMonths.length > 0) {
+    const latestMonth = expenseMonths[0];
+    const latestMonthTotal = total(
+      expenses.filter((row) => extractMonthKey(row.date, row.created_at) === latestMonth),
+    );
+    const [y, m] = latestMonth.split('-');
+    const monthName = new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('en', {
+      month: 'short',
+      year: 'numeric',
+    });
+
+    finalExpensesValue = latestMonthTotal > 0 ? latestMonthTotal : allExpensesTotal;
+    finalExpensesTitle = `Expenses (${monthName})`;
+    finalExpensesDetail = `${money(allExpensesTotal)} total recorded · No expenses in ${now.toLocaleDateString('en', { month: 'short' })}`;
+  } else if (expenses.length === 0) {
+    finalExpensesDetail = 'No expenses logged yet';
+  }
+
   const dashboardMetrics: DashboardMetrics = {
     leads: leads.length,
     activeClients: clients.filter((row) => row.status === 'Active').length,
     ongoingProjects: projects.filter((row) => row.status !== 'Completed').length,
     teamMembers: users.length,
-    paidThisMonth: total(
-      paid.filter((row) => String(row.issue_date || '').startsWith(monthKey)),
-    ),
-    expensesThisMonth: total(
-      expenses.filter((row) => String(row.date || '').startsWith(monthKey)),
-    ),
+    paidThisMonth,
+    expensesThisMonth: finalExpensesValue,
+    expensesTitle: finalExpensesTitle,
+    expensesDetail: finalExpensesDetail,
     revenue,
     projectStatuses: ['Not started', 'In progress', 'On hold', 'Completed'].map(
       (status) => ({
@@ -1051,8 +1113,8 @@ function FinanceView({ initialTab = 'Overview' }: { initialTab?: string }) {
 
   const months = Array.from(
     new Set([
-      ...invoices.map((row) => String(row.issue_date || '').slice(0, 7)),
-      ...expenses.map((row) => String(row.date || '').slice(0, 7)),
+      ...invoices.map((row) => extractMonthKey(row.issue_date, row.created_at)),
+      ...expenses.map((row) => extractMonthKey(row.date, row.created_at)),
     ].filter(Boolean)),
   )
     .sort()
@@ -1060,33 +1122,33 @@ function FinanceView({ initialTab = 'Overview' }: { initialTab?: string }) {
 
   const invoiceRows = invoices.filter(
     (row) =>
-      month === 'All months' || String(row.issue_date || '').startsWith(month),
+      month === 'All months' || extractMonthKey(row.issue_date, row.created_at) === month,
   );
   const allExpenseRowsForMonth = expenses.filter(
     (row) =>
-      month === 'All months' || String(row.date || '').startsWith(month),
+      month === 'All months' || extractMonthKey(row.date, row.created_at) === month,
   );
   const totalInvoiced = invoiceRows.reduce(
-    (sum, row) => sum + Number(row.amount || 0),
+    (sum, row) => sum + parseAmount(row.amount),
     0,
   );
   const totalCollected = invoiceRows
     .filter((row) => row.status === 'Paid')
-    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
+    .reduce((sum, row) => sum + parseAmount(row.amount), 0);
   const pendingInvoiced = invoiceRows
     .filter((row) => row.status === 'Pending' || row.status === 'Draft')
-    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
+    .reduce((sum, row) => sum + parseAmount(row.amount), 0);
 
   const totalExpenses = allExpenseRowsForMonth.reduce(
-    (sum, row) => sum + Number(row.amount || 0),
+    (sum, row) => sum + parseAmount(row.amount),
     0,
   );
   const paidExpenses = allExpenseRowsForMonth
     .filter((row) => row.status === 'Paid' || !row.status)
-    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
+    .reduce((sum, row) => sum + parseAmount(row.amount), 0);
   const pendingExpenses = allExpenseRowsForMonth
     .filter((row) => row.status === 'Pending' || row.status === 'Approved')
-    .reduce((sum, row) => sum + Number(row.amount || 0), 0);
+    .reduce((sum, row) => sum + parseAmount(row.amount), 0);
 
   const netOperatingProfit = totalCollected - totalExpenses;
   const marginPct =
@@ -1097,7 +1159,7 @@ function FinanceView({ initialTab = 'Overview' }: { initialTab?: string }) {
   const categoryTotals: Record<string, number> = {};
   for (const exp of allExpenseRowsForMonth) {
     const cat = String(exp.category || 'Other');
-    categoryTotals[cat] = (categoryTotals[cat] || 0) + Number(exp.amount || 0);
+    categoryTotals[cat] = (categoryTotals[cat] || 0) + parseAmount(exp.amount);
   }
   const sortedCategories = Object.entries(categoryTotals).sort(
     (a, b) => b[1] - a[1],

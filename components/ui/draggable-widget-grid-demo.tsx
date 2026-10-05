@@ -39,6 +39,8 @@ export interface DashboardMetrics {
   teamMembers: number;
   paidThisMonth: number;
   expensesThisMonth: number;
+  expensesTitle?: string;
+  expensesDetail?: string;
   revenue: { month: string; amount: number; expenses: number }[];
   projectStatuses: { label: string; value: number }[];
   tasks: { id: number; title: string; dueDate: string }[];
@@ -212,7 +214,16 @@ export default function DraggableWidgetGridDemo({
       projects: <Metric title="Ongoing projects" value={metrics.ongoingProjects} detail="Work currently in progress" />,
       team: <Metric title="Team members" value={metrics.teamMembers} detail="Active workspace users" />,
       revenue: <Revenue data={metrics.revenue} />,
-      expenses: <Metric title="Monthly expenses" value={money(metrics.expensesThisMonth)} detail={`${money(metrics.paidThisMonth)} collected this month`} />,
+      expenses: (
+        <Metric
+          title={metrics.expensesTitle || 'Monthly expenses'}
+          value={money(metrics.expensesThisMonth)}
+          detail={
+            metrics.expensesDetail ||
+            `${money(metrics.paidThisMonth)} collected this month`
+          }
+        />
+      ),
       pipeline: <Pipeline rows={metrics.projectStatuses} />,
       tasks: <Tasks tasks={metrics.tasks} onOpen={() => onNavigate('Tasks')} />,
     }),
