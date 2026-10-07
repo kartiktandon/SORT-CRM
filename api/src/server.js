@@ -122,7 +122,7 @@ const getCookieOptions = (req) => {
 // This route intentionally does not query MySQL. It confirms that Vercel loaded
 // the Express function; /api/health below separately verifies the database.
 app.get('/', (_req, res) => {
-  res.json({ ok: true, service: 'novera-crm-api' });
+  res.json({ ok: true, service: 'sort-crm-api' });
 });
 
 const initExpensesTable = async () => {

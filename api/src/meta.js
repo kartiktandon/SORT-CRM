@@ -41,7 +41,7 @@ export async function fetchMetaLeadDetails(leadgenId) {
   const response = await fetch(url, {
     headers: {
       Accept: 'application/json',
-      'User-Agent': 'NoveraCRM/1.0',
+      'User-Agent': 'SortCRM/1.0',
     },
     signal: AbortSignal.timeout(15000),
   });
@@ -321,13 +321,13 @@ export async function handleTestLead(req, res) {
       name: req.body?.name || randomName,
       email: req.body?.email || mockEmail,
       phone: req.body?.phone || mockPhone,
-      company: req.body?.company || 'Novera Client Corp',
+      company: req.body?.company || 'Sort Client Corp',
       city: req.body?.city || 'Mumbai',
       source: 'Facebook Ad (Demo Test)',
       platform: 'Facebook',
       status: 'New leads',
       estimated_value: 50000,
-      notes: 'Test lead generated via Meta Webhook simulator. Verified auto-ingestion into NOVERA CRM.',
+      notes: 'Test lead generated via Meta Webhook simulator. Verified auto-ingestion into SORT CRM.',
     });
 
     return res.status(201).json({

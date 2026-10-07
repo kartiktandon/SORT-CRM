@@ -11,7 +11,7 @@ import {
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api, ApiError } from '@/lib/api';
-import NoveraLogo from './novera-logo';
+import SortLogo from './sort-logo';
 export type RecordData = { id: number; [key: string]: string | number | null };
 export type User = { id: number; name: string; email: string; role: string };
 type DocumentData = { value: unknown; version: number };
@@ -51,7 +51,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       if (error instanceof ApiError && error.status === 401) {
         if (typeof window !== 'undefined') {
           localStorage.removeItem('crm_session');
-          sessionStorage.removeItem('novera_crm_cache');
+          sessionStorage.removeItem('sort_crm_cache');
         }
         router.replace('/login');
       }
@@ -67,7 +67,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
         setState(result);
         if (typeof window !== 'undefined') {
           try {
-            sessionStorage.setItem('novera_crm_cache', JSON.stringify(result));
+            sessionStorage.setItem('sort_crm_cache', JSON.stringify(result));
           } catch {}
         }
         setError('');
@@ -85,7 +85,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     queueMicrotask(() => {
       if (!active) return;
       try {
-        const cached = sessionStorage.getItem('novera_crm_cache');
+        const cached = sessionStorage.getItem('sort_crm_cache');
         if (cached) setState(JSON.parse(cached));
       } catch {}
     });
@@ -95,7 +95,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
           setState(result);
           if (typeof window !== 'undefined') {
             try {
-              sessionStorage.setItem('novera_crm_cache', JSON.stringify(result));
+              sessionStorage.setItem('sort_crm_cache', JSON.stringify(result));
             } catch {}
           }
           setError('');
@@ -190,7 +190,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('crm_session');
-      sessionStorage.removeItem('novera_crm_cache');
+      sessionStorage.removeItem('sort_crm_cache');
     }
     try {
       await api('/auth/logout', { method: 'POST' });
@@ -251,9 +251,9 @@ export function CrmProvider({ children }: { children: ReactNode }) {
           <output className="crm-initial-loader" aria-live="polite">
             <span className="crm-initial-loader-mark" aria-hidden="true">
               <span className="crm-initial-loader-glow" />
-              <NoveraLogo />
+              <SortLogo />
             </span>
-            <strong>NOVERA CRM</strong>
+            <strong>SORT CRM</strong>
             <span className="crm-initial-loader-status">
               Connecting to your workspace
               <span className="crm-initial-loader-dots" aria-hidden="true">

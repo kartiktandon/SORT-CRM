@@ -57,7 +57,7 @@ const WIDGETS: DashboardWidget[] = [
   { id: 'tasks', kind: 'tasks', size: 'wide', label: 'Upcoming tasks' },
 ];
 
-const STORAGE_KEY = 'novera_dashboard_widget_order';
+const STORAGE_KEY = 'sort_dashboard_widget_order';
 function initialWidgets() {
   if (typeof window === 'undefined') return WIDGETS;
   try {

@@ -14,9 +14,8 @@ export function normalizeOrigin(value) {
 
 export function createAllowedOrigins(configuredOrigins = process.env.FRONTEND_ORIGIN) {
   const origins = [
-    'https://crm.buildwithnovera.com',
-    'https://buildwithnovera.com',
-    'https://novera-crm-backend.vercel.app',
+    'https://sort-crm.vercel.app',
+    'https://sort-crm-frontend.vercel.app',
     ...(configuredOrigins || DEFAULT_FRONTEND_ORIGIN).split(','),
   ];
 

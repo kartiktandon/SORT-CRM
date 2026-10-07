@@ -26,7 +26,7 @@ import { Input } from '@/components/ui/input';
 import './login.css';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import NoveraLogo from '../novera-logo';
+import SortLogo from '../sort-logo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -49,12 +49,12 @@ export default function LoginPage() {
       className={`login-page lamp-login ${lampOn ? 'lamp-is-on' : 'lamp-is-off'}`}
     >
       <header className="login-header">
-        <Link className="login-brand" href="/" aria-label="NOVERA CRM home">
+        <Link className="login-brand" href="/" aria-label="SORT CRM home">
           <span>
-            <NoveraLogo />
+            <SortLogo />
           </span>
           <div>
-            NOVERA CRM<small>A little order. A lot of possibility.</small>
+            SORT CRM<small>A little order. A lot of possibility.</small>
           </div>
         </Link>
         <Link href="/" className="login-preview-link">
@@ -256,7 +256,7 @@ export default function LoginPage() {
         </div>
       </section>
       <footer className="login-footer">
-        <span>© {new Date().getFullYear()} NOVERA CRM</span>
+        <span>© {new Date().getFullYear()} SORT CRM</span>
         <span>
           Made for teams with big plans
           <span className="login-footer-star">✦</span>

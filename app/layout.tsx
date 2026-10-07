@@ -15,20 +15,19 @@ const geistMono = Geist_Mono({
 export const dynamic = 'force-static';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://crm.buildwithnovera.com'),
-  title: 'Novera CRM — Agency command center',
+  title: 'SORT CRM — Agency command center',
   description: 'A focused CRM for teams to manage leads, clients, projects and revenue.',
   icons: {
     icon: '/favicon.svg',
   },
   openGraph: {
-    title: 'Novera CRM — Agency command center',
+    title: 'SORT CRM — Agency command center',
     description: 'Leads. Clients. Projects. One clear workspace.',
     images: ['/og.png'],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Novera CRM — Agency command center',
+    title: 'SORT CRM — Agency command center',
     description: 'Leads. Clients. Projects. One clear workspace.',
     images: ['/og.png'],
   },

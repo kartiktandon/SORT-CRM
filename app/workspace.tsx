@@ -1513,12 +1513,12 @@ function AgreementsView() {
     </>
   );
 }
-export const NOVERA_BOILERPLATE: Record<string, string> = {
+export const SORT_BOILERPLATE: Record<string, string> = {
   quotationNo: 'QT-2026-101',
   date: '18 Sept 2026',
   clientName: 'ZaapMed',
   projectName: 'Pharmacy Order Processing & Fulfilment System',
-  agencyName: 'NOVERA LABS',
+  agencyName: 'SORT CRM',
   deliverablesSummary: 'Customer Web App · Admin Dashboard · Chemist Portal',
   scope1Title: '1. Customer Web Application',
   scope1Items:
@@ -1543,7 +1543,7 @@ export const NOVERA_BOILERPLATE: Record<string, string> = {
   keyTerms:
     '• TAT of 20 working days starts after advance payment and receipt of required data, credentials, approvals and third-party access.\n• Client is responsible for the accuracy, legality and completeness of supplied medicine/product information.\n• Material changes or additions to scope will be estimated and quoted separately.',
   footerText:
-    'NOVERA LABS | Custom Technology Solutions Pharmacy Order Processing & Fulfilment System',
+    'SORT CRM | Custom Technology Solutions Pharmacy Order Processing & Fulfilment System',
 };
 
 function renderQuotationBullets(text: string | undefined) {
@@ -1579,17 +1579,17 @@ function AgreementGenerator() {
       string
     >;
     return {
-      ...NOVERA_BOILERPLATE,
+      ...SORT_BOILERPLATE,
       ...saved,
       clientName:
         saved.clientName ||
         saved['Client Name'] ||
         saved['Company Name'] ||
-        NOVERA_BOILERPLATE.clientName,
+        SORT_BOILERPLATE.clientName,
       projectName:
         saved.projectName ||
         saved['Project Name'] ||
-        NOVERA_BOILERPLATE.projectName,
+        SORT_BOILERPLATE.projectName,
     };
   });
 
@@ -1655,7 +1655,7 @@ ${form.footerText}
         <div>
           <Heading title="Agreement & Quotation Generator" />
           <p className="ws-hint">
-            Prefilled with the Novera Labs quotation boilerplate. Modify details
+            Prefilled with the SORT CRM quotation boilerplate. Modify details
             below or print directly to PDF.
           </p>
         </div>
@@ -1665,13 +1665,13 @@ ${form.footerText}
             variant="outline"
             className="ws-toolbar-btn ws-btn-preset"
             onClick={() => {
-              setForm({ ...NOVERA_BOILERPLATE });
-              setNotification('Loaded Novera Labs quotation boilerplate!');
+              setForm({ ...SORT_BOILERPLATE });
+              setNotification('Loaded SORT CRM quotation boilerplate!');
               setTimeout(() => setNotification(''), 3500);
             }}
           >
             <Sparkles size={14} className="text-amber-500 mr-1.5" />
-            Load Novera Preset
+            Load SORT Preset
           </Button>
           <Button
             type="button"
@@ -1770,7 +1770,7 @@ ${form.footerText}
                       onChange={(e) =>
                         setForm({ ...form, agencyName: e.target.value })
                       }
-                      placeholder="e.g. NOVERA LABS"
+                      placeholder="e.g. SORT CRM"
                     />
                   </label>
                   <label className="ws-col-span-full">
@@ -2081,8 +2081,8 @@ ${form.footerText}
                     variant="ghost"
                     className="text-amber-600"
                     onClick={() => {
-                      setForm({ ...NOVERA_BOILERPLATE });
-                      setNotification('Reset to Novera Labs template!');
+                      setForm({ ...SORT_BOILERPLATE });
+                      setNotification('Reset to SORT CRM template!');
                       setTimeout(() => setNotification(''), 3500);
                     }}
                   >
@@ -2118,7 +2118,7 @@ ${form.footerText}
                   />
                 </svg>
                 <span className="ws-q-brand-name">
-                  {form.agencyName || 'NOVERA LABS'}
+                  {form.agencyName || 'SORT CRM'}
                 </span>
               </div>
             </div>

@@ -20,7 +20,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://novera-crm-backend.vercel.app/api/:path*"
+      "destination": "https://sort-crm.vercel.app/api/:path*"
     }
   ]
 }

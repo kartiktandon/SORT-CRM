@@ -8,7 +8,7 @@ import {
 
 void test('allows the production CRM origin', () => {
   const origins = createAllowedOrigins();
-  assert.equal(isOriginAllowed('https://crm.buildwithnovera.com', origins), true);
+  assert.equal(isOriginAllowed('https://sort-crm.vercel.app', origins), true);
 });
 
 void test('normalizes configured origins and trailing slashes', () => {
@@ -18,8 +18,8 @@ void test('normalizes configured origins and trailing slashes', () => {
     true,
   );
   assert.equal(
-    normalizeOrigin('https://CRM.BUILDWITHNOVERA.COM/'),
-    'https://crm.buildwithnovera.com',
+    normalizeOrigin('https://SORT-CRM.VERCEL.APP/'),
+    'https://sort-crm.vercel.app',
   );
 });
 

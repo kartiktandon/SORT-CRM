@@ -23,7 +23,7 @@ import {
   X,
   Zap,
 } from 'lucide-react';
-import NoveraLogo from './novera-logo';
+import SortLogo from './sort-logo';
 import { getTodayScheduleNotifications } from './schedule-notifications';
 
 const navigation = [
@@ -103,10 +103,10 @@ function Workspace() {
       <aside className={`sidebar ${mobileOpen ? 'sidebar-open' : ''}`}>
         <div className="brand">
           <span className="brand-mark">
-            <NoveraLogo />
+            <SortLogo />
           </span>
           <span className="brand-copy">
-            <strong>NOVERA CRM</strong>
+            <strong>SORT CRM</strong>
             <small>Growth workspace</small>
           </span>
         </div>

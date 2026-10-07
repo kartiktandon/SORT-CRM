@@ -34,10 +34,11 @@ export function getTodayScheduleNotifications(
 
   return leads
     .filter((lead) => {
+      const rawDate = lead.follow_up_date;
       const followUpDate =
-        lead.follow_up_date instanceof Date
-          ? istDateKey(lead.follow_up_date)
-          : String(lead.follow_up_date ?? '').slice(0, 10);
+        (rawDate as unknown) instanceof Date
+          ? istDateKey(rawDate as unknown as Date)
+          : String(rawDate ?? '').slice(0, 10);
       if (followUpDate !== today) return false;
       if (isLostLead(lead)) return false;
       return true;

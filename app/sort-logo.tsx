@@ -1,8 +1,8 @@
-type NoveraLogoProps = {
+type SortLogoProps = {
   className?: string;
 };
 
-export default function NoveraLogo({ className }: NoveraLogoProps) {
+export default function SortLogo({ className }: SortLogoProps) {
   return (
     <svg
       className={className}
