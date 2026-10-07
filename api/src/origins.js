@@ -16,6 +16,7 @@ export function createAllowedOrigins(configuredOrigins = process.env.FRONTEND_OR
   const origins = [
     'https://sort-crm.vercel.app',
     'https://sort-crm-frontend.vercel.app',
+    'https://sort-crm-1fay.vercel.app',
     ...(configuredOrigins || DEFAULT_FRONTEND_ORIGIN).split(','),
   ];
 
