@@ -1,8 +1,17 @@
 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" rx="14" fill="#09090B"/>
-  <g transform="translate(7 9) scale(.735294)">
-    <path d="M5 24L15 16L63 51V61L53 61L5 26V24Z" fill="#FFFFFF"/>
-    <path d="M5 34L24 48V61L5 47V34Z" fill="#FFFFFF"/>
-    <path d="M44 0L63 14V38L44 24V0Z" fill="#FFFFFF"/>
-  </g>
+  <rect width="64" height="64" rx="16" fill="#09090B"/>
+  <rect x="4" y="16" width="56" height="32" rx="16" fill="#FFFFFF"/>
+  <text
+    x="28"
+    y="33.5"
+    text-anchor="middle"
+    dominant-baseline="central"
+    fill="#08091A"
+    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+    font-size="16"
+    font-weight="900"
+    letter-spacing="-0.4px"
+  >Sort</text>
+  <circle cx="49" cy="36.5" r="2.5" fill="#8B5CF6"/>
 </svg>
+

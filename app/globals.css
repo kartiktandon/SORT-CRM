@@ -82,8 +82,8 @@ button {
 .crm-initial-loader-mark {
   position: relative;
   display: grid;
-  width: 92px;
-  height: 92px;
+  width: 120px;
+  height: 52px;
   margin-bottom: 22px;
   place-items: center;
   isolation: isolate;
@@ -91,35 +91,19 @@ button {
 
 .crm-initial-loader-mark svg {
   z-index: 1;
-  width: 58px;
-  height: 53px;
-  color: #ffffff;
-  filter: drop-shadow(0 0 12px rgba(165, 180, 252, 0.28));
-  animation: sort-loader-breathe 1.8s ease-in-out infinite;
-}
-
-.crm-initial-loader-mark svg path {
-  opacity: 0;
-  transform: translateY(7px);
-  transform-origin: center;
-  animation: sort-loader-piece 1.8s ease-in-out infinite;
-}
-
-.crm-initial-loader-mark svg path:nth-child(2) {
-  animation-delay: 0.12s;
-}
-
-.crm-initial-loader-mark svg path:nth-child(3) {
-  animation-delay: 0.24s;
+  width: 104px;
+  height: 40px;
+  filter: drop-shadow(0 4px 16px rgba(165, 180, 252, 0.35));
+  animation: sort-loader-breathe 2s ease-in-out infinite;
 }
 
 .crm-initial-loader-glow {
   position: absolute;
-  inset: 4px;
+  inset: -6px;
   z-index: -1;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.36), rgba(99, 102, 241, 0) 68%);
-  animation: sort-loader-glow 1.8s ease-in-out infinite;
+  border-radius: 9999px;
+  background: radial-gradient(ellipse, rgba(99, 102, 241, 0.42), rgba(99, 102, 241, 0) 72%);
+  animation: sort-loader-glow 2s ease-in-out infinite;
 }
 
 .crm-initial-loader strong {
@@ -215,7 +199,7 @@ button {
 
 .brand {
   height: 44px;
-  padding: 0 8px;
+  padding: 0 4px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -223,22 +207,21 @@ button {
 }
 
 .brand-mark {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 36px;
-  color: #ffffff;
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, filter 0.2s ease;
 }
 
 .brand-mark svg {
-  width: 34px;
-  height: 31px;
+  width: 80px;
+  height: 30px;
+  border-radius: 9999px;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.28));
 }
 
 .brand:hover .brand-mark {
-  transform: scale(1.05);
+  transform: scale(1.04);
 }
 
 .brand-copy {

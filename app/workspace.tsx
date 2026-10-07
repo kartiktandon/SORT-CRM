@@ -39,6 +39,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import SortLogo from './sort-logo';
 import {
   useCrm,
   useRecords,
@@ -2102,21 +2103,7 @@ ${form.footerText}
             <div className="ws-q-header">
               <h1 className="ws-q-title">QUOTATION</h1>
               <div className="ws-q-brand-badge">
-                <svg
-                  className="ws-q-logo-mark"
-                  width="28"
-                  height="22"
-                  viewBox="0 0 32 28"
-                  fill="none"
-                  aria-hidden="true"
-                >
-                  <path d="M4 22L14 6H19.5L9.5 22H4Z" fill="white" />
-                  <path
-                    d="M14 22L24 6H29L19 22H14Z"
-                    fill="white"
-                    opacity="0.9"
-                  />
-                </svg>
+                <SortLogo width="64" height="24" />
                 <span className="ws-q-brand-name">
                   {form.agencyName || 'SORT CRM'}
                 </span>
