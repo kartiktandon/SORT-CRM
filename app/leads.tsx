@@ -10,7 +10,9 @@ import {
   CalendarClock,
   ChevronLeft,
   ChevronRight,
+  Download,
   Eye,
+  FileSpreadsheet,
   FileText,
   Globe,
   Camera,
@@ -43,6 +45,7 @@ import {
 } from '@/components/ui/dialog';
 import './leads.css';
 import { useCrm, useRecords, text, dateLabel } from './crm-data';
+import ImportLeadsModal from './import-leads-modal';
 const toStatus = (stage: string) =>
   ({ New: 'New leads', Won: 'Closed', 'Proposal Sent': 'Proposal' })[stage] ||
   stage;
@@ -202,7 +205,7 @@ function exportLeads(leads: Lead[]) {
 }
 
 export default function LeadsExplorer() {
-  const { user, save, remove, busy } = useCrm();
+  const { user, save, remove, busy, refresh } = useCrm();
   const records = useRecords('leads');
   const noteRecords = useRecords('lead_notes');
   const owners = useRecords('users').map((row) => text(row, 'name'));
@@ -277,12 +280,39 @@ export default function LeadsExplorer() {
   const [selected, setSelected] = useState<number[]>([]);
   const [focusedLeadId, setFocusedLeadId] = useState<number | null>(null);
   const [draft, setDraft] = useState<Lead | null>(null);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [detailTab, setDetailTab] = useState('Overview');
   const [newNote, setNewNote] = useState('');
   const [activityNote, setActivityNote] = useState('');
   const [notice, setNotice] = useState('');
   const [bulkStage, setBulkStage] = useState('New');
   const [scope, setScope] = useState('All Leads');
+
+  const openNewLead = () => {
+    setDraft({
+      id: 0,
+      name: '',
+      company: '',
+      stage: 'New',
+      source: 'Website',
+      age: 'Today',
+      temperature: '',
+      platform: 'Website',
+      phone: '',
+      email: '',
+      city: '',
+      budget: '',
+      service: '',
+      timeline: '',
+      owner: user.name || '',
+      followUp: 'No follow-up',
+      followUpDate: '',
+      notes: '',
+      createdAt: new Date().toISOString().slice(0, 10),
+    });
+    setNewNote('');
+    setDetailTab('Overview');
+  };
   const metricScopedLeads = leads.filter(
     (lead) =>
       isInDateRange(lead, dateRange) &&
@@ -750,20 +780,49 @@ export default function LeadsExplorer() {
           <strong>👋 Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'}, {user.name}!</strong>
           <p>Let&apos;s turn every lead into an unforgettable celebration.</p>
         </div>
-        <select
-          aria-label="Filter leads by creation date"
-          value={dateRange}
-          onChange={(event) => {
-            setDateRange(event.target.value as DateRange);
-            setPage(1);
-          }}
-        >
-          {['All Dates', 'Today', 'Last 7 Days', 'Last 30 Days', 'This Month'].map(
-            (item) => (
-              <option key={item}>{item}</option>
-            ),
-          )}
-        </select>
+        <div className="lx-header-actions">
+          <select
+            aria-label="Filter leads by creation date"
+            value={dateRange}
+            onChange={(event) => {
+              setDateRange(event.target.value as DateRange);
+              setPage(1);
+            }}
+          >
+            {['All Dates', 'Today', 'Last 7 Days', 'Last 30 Days', 'This Month'].map(
+              (item) => (
+                <option key={item}>{item}</option>
+              ),
+            )}
+          </select>
+          <button
+            type="button"
+            className="lx-btn-action lx-btn-action-excel"
+            onClick={() => setIsImportOpen(true)}
+            title="Import Leads from Excel or CSV file"
+          >
+            <FileSpreadsheet size={16} />
+            Import Excel
+          </button>
+          <button
+            type="button"
+            className="lx-btn-action"
+            onClick={() => exportLeads(filtered)}
+            title="Export leads to CSV"
+          >
+            <Download size={15} />
+            Export
+          </button>
+          <button
+            type="button"
+            className="lx-btn-action lx-btn-action-primary"
+            onClick={openNewLead}
+            title="Add a new lead"
+          >
+            <Plus size={15} />
+            Add Lead
+          </button>
+        </div>
       </div>
       <div className="lx-metrics" aria-label="Lead status overview">
         {metricCards.map(({ label, value, icon: Icon, tone, selected: active, action }) => (
@@ -1848,6 +1907,15 @@ export default function LeadsExplorer() {
           )}
         </DialogContent>
       </Dialog>
+      <ImportLeadsModal
+        open={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onImportSuccess={(count) =>
+          setNotice(`Successfully imported ${count} leads from spreadsheet!`)
+        }
+        availableOwners={owners}
+        refreshData={refresh}
+      />
     </section>
   );
 }

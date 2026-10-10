@@ -447,6 +447,50 @@ app.put('/api/documents/:key', asyncRoute(async (req, res) => {
   res.json({ value, version: version + 1 });
 }));
 
+// ── Bulk Leads Import ─────────────────────────────────────────
+app.post('/api/leads/bulk', asyncRoute(async (req, res) => {
+  const { leads } = req.body || {};
+  if (!Array.isArray(leads) || !leads.length) {
+    return res.status(400).json({ error: 'Expected an array of leads to import.' });
+  }
+  if (leads.length > 1000) {
+    return res.status(400).json({ error: 'Import batch exceeds maximum limit of 1000 leads.' });
+  }
+
+  const results = [];
+  const noteInserts = [];
+
+  for (let i = 0; i < leads.length; i++) {
+    const raw = leads[i];
+    if (!raw || typeof raw !== 'object') continue;
+    const remark = typeof raw.remarks === 'string' && raw.remarks.trim() ? raw.remarks.trim()
+      : typeof raw.note === 'string' && raw.note.trim() ? raw.note.trim() : '';
+
+    const leadData = validate('leads', raw, true);
+
+    if (typeof raw.created_at === 'string' && /^\d{4}-\d{2}-\d{2}(?: \d{2}:\d{2}:\d{2})?$/.test(raw.created_at.trim())) {
+      leadData.created_at = raw.created_at.trim();
+    }
+
+    const [insertResult] = await db.query('INSERT INTO `leads` SET ?', leadData);
+    const newLeadId = insertResult.insertId;
+    results.push({ id: newLeadId, ...leadData });
+
+    if (remark) {
+      noteInserts.push([newLeadId, req.user.id, req.user.name, remark]);
+    }
+  }
+
+  if (noteInserts.length > 0) {
+    await db.query(
+      'INSERT INTO `lead_notes` (lead_id, user_id, user_name, note) VALUES ?',
+      [noteInserts]
+    );
+  }
+
+  res.status(201).json({ count: results.length, data: results });
+}));
+
 // ── Generic CRUD ─────────────────────────────────────────────
 for (const resource of Object.keys(resources)) {
   app.get(`/api/${resource}`, asyncRoute(async (req, res) => {
