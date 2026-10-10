@@ -258,8 +258,13 @@ export default function ImportLeadsModal({
                       Click to choose an Excel or CSV file
                     </strong>
                     <span className="text-xs text-slate-500 mt-1 block">
-                      or drag and drop your spreadsheet here (.xlsx, .xls, .csv)
+                      or drag and drop your spreadsheet here
                     </span>
+                    <div className="lx-dropzone-formats">
+                      <span className="lx-format-tag">.XLSX</span>
+                      <span className="lx-format-tag">.XLS</span>
+                      <span className="lx-format-tag">.CSV</span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -319,13 +324,16 @@ export default function ImportLeadsModal({
         ) : (
           <div className="lx-import-preview-section">
             <div className="lx-preview-toolbar">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <div className="lx-file-badge">
                   <FileSpreadsheet size={15} />
                   <span>{file?.name}</span>
                 </div>
-                <span className="text-xs font-medium text-slate-500">
-                  {leads.length} leads detected ({selectedCount} selected)
+                <span className="lx-count-badge lx-count-total">
+                  {leads.length} detected
+                </span>
+                <span className="lx-count-badge lx-count-valid">
+                  {selectedCount} ready to import
                 </span>
               </div>
               <div className="flex items-center gap-3">
